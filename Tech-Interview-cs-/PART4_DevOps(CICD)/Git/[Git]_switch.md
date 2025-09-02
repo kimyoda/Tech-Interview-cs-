@@ -27,3 +27,30 @@
 ⇒ **결론: 의도를 명확히 분리하여 안전하게 작업할 수 있다.**
 
 ---
+
+## 3. 🌿 `git switch` (브랜치 전용)
+
+- 브랜치를 **전환**하거나 생성하고 추적하는 작업을 담당한다.
+
+### 자주 쓰는 명령어
+
+```bash
+# 1. 기존 브랜치로 이동
+git switch branch
+
+# 2. 새 브랜치를 생성하며 바로 이동
+git switch -c feature/new-branch
+
+# 3. 원격 브랜치를 로컬에 만들고 추적
+git switch --track origin/feature/branch
+
+# 4. 바로 직전에 있던 브랜치로 돌아가기
+git switch -
+
+# 5. 특정 커밋으로 이동
+git switch --detach  <commit_hash>
+```
+
+- 브랜치만 다루기에 파일 경로와 헷갈릴 일이 없다.
+- 브랜치를 바꾸는 동안 작업 중인 파일을 실수로 건드리지 않는다.
+- `--trach` 옵션을 쓰면 `git pull`, `push`가 편해진다.
