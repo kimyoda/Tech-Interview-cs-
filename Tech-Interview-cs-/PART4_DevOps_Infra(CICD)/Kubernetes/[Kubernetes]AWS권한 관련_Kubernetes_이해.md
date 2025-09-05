@@ -74,3 +74,41 @@
   2. `NodePort`: 모든 노드의 특정 포트를 열어 외부에서 `노드IP:포트`로 접근. 주로 개발/테스트 용도.
   3. `LoadBalancer`: 클라우드 로드 밸런서를 프로비저닝해 외부 인터넷에서 접근 가능(AWS, GCP 등).
   4. `ExternalName`: 외부 서비스에 대한 CNAME 레코드를 반환해 내부에서 외부 서비스를 별칭으로 사용.
+
+---
+
+## 1-2. 다양한 워크로드 관리 방식(ReplicaSet, DaemonSet, StatefulSet)
+
+### ReplicaSet (레플리카셋)
+
+- 역할: 원하는 수의 Pod 복제본을 항상 유지한다(자가 치유).
+- 주용도: 단독 사용은 드묾. 보통 `Deployment`가 내부적으로 생성·관리한다.
+- 핵심
+  - Label Selector로 대상 파드 그룹 식별
+  - 원하는 상태(desired)와 현재 상태(current) 비교·조정
+  - 스케일 아웃/인 시 파드 자동 생성·삭제
+- 언제 쓰나: 단순히 파드 개수만 직접 관리해야 하거나, `Deployment` 없이 세밀 제어가 필요할 때
+
+### DaemonSet(데몬셋)
+
+- 역할: 모든(또는 특정) 노드마다 1개 파드를 배치한다.
+- 사용 예: 로그 수집(fluentd/logstash), 모니터링(node-exporter/datadog), 네트워크 플러그인(calico), 스토리지 데몬(ceph 등)
+- 특징
+  - 노드 추가/제거 시 자동 반영(해당 노드에 파드 생성/삭제)
+  - NodeSelector/Node Affinity/Tolerations로 특정 노드 그룹에만 배포 가능
+  - EKS 기본 컴포넌트(예: `aws-node` VPC CNI, `kube-proxy`)가 DaemonSet으로 동작
+- 언제 쓰나: 노드 단위로 반드시 실행되어야 하는 에이전트/데몬 배치
+
+### StatefulSet(스테이트풀셋)
+
+- 역할: 상태가 있는 워크로드를 위한 컨트롤러(DB, 메시징 등).
+- 특징(중요)
+  - 안정된 이름과 네트워크 ID: `{statefulset-name}-{ordinal}` 형태로 각 파드가 고유 ID를 가짐
+  - 순서 보장: 생성은 0→1→2…, 종료는 역순으로 진행
+  - 안정적 스토리지: 각 파드에 전용 PVC 자동 바인딩(재시작해도 같은 볼륨 유지)
+  - 안정적 DNS: 파드별 고정 DNS를 통해 특정 인스턴스에 직접 접근 가능
+- 언제 쓰나: MySQL, PostgreSQL, Kafka, ZooKeeper 등 데이터 영속·순서·고유 ID가 필요한 경우
+
+---
+
+## 1-3. 애플리케이션 설정관리(ConfigMap, Secret)
