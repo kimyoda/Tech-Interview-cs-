@@ -112,3 +112,27 @@
 ---
 
 ## 1-3. 애플리케이션 설정관리(ConfigMap, Secret)
+
+### ConfigMap(컨피그맵)
+
+- 애플리케이션의 비민감 설정 데이터를 저장하는 API 오브젝트다.
+- 목적
+  - 애플리케이션 코드와 설정을 분리해 환경별로 다른 설정을 적용할 수 있게 한다. 동일한 이미지를 사용하되 설정만 다르게 주입한다(개발/스테이징/프로덕션).
+  1. 환경 변수로 주입
+  2. 볼륨로 마운트(설정 파일 형태)
+  3. 커맨드라인 인자로 전달
+- 환경별 관리: `dev-config`, `staging-config`, `prod-config` 등으로 나눠 관리한다.
+
+### Secret(시크릿)
+
+- 비밀번호, OAuth 토큰, SSH 키, TLS 인증서 등 **민감한 데이터를 안전하게 저장**하는 API 오브젝트다.
+- 목적: 민감 정보를 코드/이미지에 하드코딩하지 않고 런타임에 안전하게 주입한다.
+
+- ConfigMap vs Secret
+  - Secret: Base64 인코딩 저장, at-rest 암호화(etcd) 가능, 보통 메모리(tmpfs)로 마운트 권장
+  - ConfigMap: 평문 저장(민감하지 않은 설정), 필요 시 etcd 암호화 별도 구성
+- Secret 타입들:
+  1. Opaque: 일반적인 key-value 데이터(기본)
+  2. kubernetes.io/dockerconfigjson: Docker 레지스트리 인증 정보
+  3. kubernetes.io/tls: TLS 인증서와 키
+  4. kubernetes.io/service-account-token: ServiceAccount 토큰
