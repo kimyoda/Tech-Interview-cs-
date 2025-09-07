@@ -136,3 +136,58 @@
   2. kubernetes.io/dockerconfigjson: Docker 레지스트리 인증 정보
   3. kubernetes.io/tls: TLS 인증서와 키
   4. kubernetes.io/service-account-token: ServiceAccount 토큰
+
+---
+
+## 1-4. 스토리지 관리 방식(Volume, PV, PVC - 데이터 영속성)
+
+- 파드는 휘발성이다. 컨테이너가 재시작되면 로컬 데이터는 사라진다. 데이터베이스, 로그, 업로드 파일처럼 **지속 보관이 필요한 데이터**를 위해 볼륨 계층(Volume → PV/PVC → StorageClass)을 사용한다.
+
+### Volume(볼륨) - Pod 레벨 스토리지
+
+- 파드 안에서 컨테이너가 사용하는 디렉터리다. 파드가 지워지면 대부분 함께 사라진다.
+- 자주 쓰는 타입
+  1. emptyDir: 파드 생명주기와 함께하는 임시 디렉터리(캐시/임시 파일)
+  2. hostPath: 노드의 디렉터리를 파드에 마운트(단일 노드 의존, 운영 환경 비권장)
+  3. configMap/secret: 설정·민감 정보를 파일로 마운트(코드와 설정 분리)
+
+### PersistentVolume(PV) - 클러스터 레벨 스토리지
+
+- 관리자가 미리 만들거나(StorageClass 없이) StorageClass로 동적 생성되는 **클러스터 공용 스토리지 리소스**다.
+- 핵심 특성
+  - 파드와 독립적인 생명주기(파드 삭제되어도 데이터 유지)
+  - 용량(capacity), 접근 모드(accessModes), `storageClassName`, `reclaimPolicy` 등을 가짐
+  - 하나의 PV는 하나의 PVC에 바인딩되어 사용됨
+
+### PersistentVolumeClaim(PVC) - 스토리지 요청
+
+- 사용자가 필요 용량/접근 모드/스토리지 클래스를 명시해 **PV를 요청**하는 오브젝트다.
+- 동작
+  - 조건에 맞는 PV가 있으면 자동 바인딩, 없으면 StorageClass가 있음을 전제로 동적 생성
+  - 파드는 `volume`에 PVC를 참조하여 스토리지를 마운트해 사용
+
+### StorageClass - 동적 프로비저닝 템플릿
+
+- PV를 동적으로 프로비저닝하는 템플릿이다. 클라우드별 드라이버/파라미터(EBS/EFS 등)를 정의한다.
+- 장점
+
+  - PVC 생성만으로 필요한 스토리지가 자동 생성되고 PV로 등록됨(사전 PV 준비 불필요)
+  - 클래스별 성능/비용 정책을 분리 운영(예: `gp3`, `io1` 등)
+
+- 동적 프로비저닝 흐름(예: AWS EBS)
+
+  1. 개발자가 `storageClassName`을 지정해 PVC 생성(용량/접근 모드 포함)
+  2. StorageClass 컨트롤러가 AWS API를 호출해 EBS 볼륨 생성
+  3. 생성된 볼륨이 PV로 등록되고 PVC와 자동 바인딩
+  4. 파드가 해당 PVC를 마운트하여 사용
+
+- 접근 모드(Access Modes)
+
+  - ReadWriteOnce(RWO): 단일 노드에서 읽기/쓰기(예: EBS)
+  - ReadOnlyMany(ROX): 다수 노드에서 읽기 전용(예: EFS)
+  - ReadWriteMany(RWX): 다수 노드에서 읽기/쓰기(예: NFS, EFS)
+
+- 한눈에 보는 선택 가이드
+  - 단일 인스턴스 DB, 상태ful 워크로드 → EBS + RWO
+  - 여러 노드에서 공유 읽기/쓰기 필요 → EFS/NFS + RWX
+  - 단순 임시 캐시/작업 디렉터리 → emptyDir
