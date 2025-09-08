@@ -322,3 +322,116 @@ spec:
 - 네임스페이스 명명 규칙을 표준화해 운영 혼란 최소화(예: `team-<name>-<env>`)
 
 ---
+
+## 1-6. kubectl - Kubernetes 클러스터 관리도구
+
+- kubernetes 클러스터의 API 서버와 통신하기 위한 명령줄 도구이다.
+- 특징: 사용자가 입력한 명령을 kubernetes API 서버가 이해할 수 있는 HTTP REST API 호출로 변환 후 전송, 결과를 사용자에게 표시한다.
+- 기본구조
+
+```bash
+kubectl [command] [TYPE] [NAME] [flags]
+# 예시:
+kubectl get pods my-pod -n development -o yaml
+#       ↑   ↑    ↑       ↑             ↑
+#    command TYPE NAME  namespace    output format
+```
+
+- 핵심 명령어
+  - 리소스 조회 (get, describe)
+
+```bash
+# 기본 리소스 조회
+kubectl get pods # 기본 네임스페이스의 모든 Pod
+kubectl get pods -n development # development 네임스페이스의 Pod
+kubectl get pods --all -namespaces # 모든 네임스페이스의 Pod
+kubectl get pods -A # --all-namespaces의 줄임
+
+# 여러 리소스 타입 동시 조회
+
+kubectl get pods, services, deployments
+kubectl get all # 주요 리소스들을 한번
+
+# 출력 형식 지정
+
+kubectl get pods -o wide # 더 많은 정보 표
+kubectl get pods -o yaml # YAML 형식
+kubectl get pods -o json # JSON 형식
+kubectl get pods -o jsonpath='{.items[*].metadata.name}' # JSONPath 사용
+
+# 레이블 기반 필터
+
+kubectl get pods -l app=ngix # app=nginx 레이블을 가진 Pod만
+kubectl get pods -l enviroment!=production # enviroment가 production이 아닌 Pod
+
+# 상세 정보 확
+
+kubectl describe pod my-pod # Pod의 상세 정보와 이벤
+kubectl describe service my-service # Service의 상세 정보와 엔드포인
+kubectl describe node worker-node-1 # 노드 정보와 할당된 Pod 목록
+```
+
+- 리소스 생성 및 업데이트 (apply, create)
+
+```bash
+# 기본 리소스 조회
+kubectl apply -f deployment.yaml # 단일 파일 적용
+kubectl apply -f ./mainfests/ # 디렉토리 내 모든 YAML 파일 적용
+kubectl apply -f https://예시 # URL에서 직접 적용
+kubectl apply -k ./overlays/production # Kustomize 사용
+
+# 명령줄에서 직접 생성
+kubectl create deployment nginx --image=nginx:latest --replicas=3
+kubectl create service clusterip my-service --tcp=80:8080
+kubectl create configmap app-config --from-literal=key1=value1 --from-literal=key2=value2
+kubectl create secret generic db-secret --from-literal=username=admin --from-literal=password=secretpass
+
+# 네임스페이스 지정
+kubectl apply -f deployment.yaml -n production
+kubectl create namespace development
+```
+
+- 리소스 삭제 (delete)
+
+```bash
+# 리소스 삭제
+kubectl delete pod my-pod # 특정 Pod 삭제
+kubectl delete pods --all # 모든 Pod 삭제
+kubectl delete -f deployment.yaml # 파일에 정의된 리소스 삭제
+kubectl delete deployment, service my-app # 여러 리소스 타입 동시 삭제
+
+# 강제 삭제 (즉시 삭제)
+kubectl delete pod my-pod --force --grace-period=0
+```
+
+- 로그 및 디버깅
+
+```bash
+# 로그 확인
+kubectl logs my-pod # Pod 로그 확
+kubectl logs my-pod -c container-name # 멀티 컨테이너 Pod에서 특정 컨테이너 로그 확인
+kubectl logs -f my-pod # 실시간 로그 스트리밍 (-f = follow)
+kubectl logs my-pod --previous # 이전에 실행된 컨테이너의 로그 (재시작된 경우)
+kubectl logs -l app=nginx # 레이블 셀렉터로 여러 Pod 로그 동시 확
+
+# 최근 로그만 확인
+kubectl logs my-pod --tail=50 # 마지막 50줄
+kubectl logs my-pod --since=1h # 최근 1시간 로
+
+# Pod 내부 접근
+kubectl exec -it my-pod -- /bin/bash # Pod 내부 쉘 접
+kubectl exec -it my-pod --c sidecar -- /bin/sh # 멀티 컨테이너에서 특정 컨테이너 접근
+kubectl exec -it my-pod -- ls -la /app # 명령 실행만 하고 종
+
+# 파일 복
+kubectl cp my-pod:/app/config.json ./local-config.json # Pod -> 로
+kubectl cp ./local-file.txt my-pod:/app/uploaded-file.txt # 로컬 -> Pod
+```
+
+- 포트 포워딩 및 프록시
+
+- 리소스 편집 및 스케일링
+
+- 배포 관리(rollout)
+
+- 이벤트 및 문제해결
