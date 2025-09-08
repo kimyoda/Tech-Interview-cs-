@@ -149,7 +149,23 @@
 - 자주 쓰는 타입
   1. emptyDir: 파드 생명주기와 함께하는 임시 디렉터리(캐시/임시 파일)
   2. hostPath: 노드의 디렉터리를 파드에 마운트(단일 노드 의존, 운영 환경 비권장)
+  ```bash
+  volumes:
+  - name: config-vol
+    hostPath:
+      path: /var/log
+      type: Directory
+  ```
   3. configMap/secret: 설정·민감 정보를 파일로 마운트(코드와 설정 분리)
+  ```bash
+  volumes:
+  - name: config-vol
+    configMap:
+      name: app-config
+  - name: secret-vol
+    secret:
+      secretName: app-secret
+  ```
 
 ### PersistentVolume(PV) - 클러스터 레벨 스토리지
 
@@ -165,29 +181,144 @@
 - 동작
   - 조건에 맞는 PV가 있으면 자동 바인딩, 없으면 StorageClass가 있음을 전제로 동적 생성
   - 파드는 `volume`에 PVC를 참조하여 스토리지를 마운트해 사용
+  ```bash
+  # PVC 생성
+  apiVersion: v1
+  kind: PersistentVolumeClaim
+  metadata:
+  	name: mysql-pvc
+  spec:
+  	accessModes:
+  		- ReadWriteOnce
+  	resources:
+  		requests:
+  			storage: 10Gi
+  storageClassName: gp2
+  # Pod에서 PVC 사용
+  apiVersion: apps/v1
+  kind: Deployment
+    metadata:
+      name: mysql
+  spec:
+    template:
+      spec:
+        containers:
+        - name: mysql
+        image: mysql:8.0
+        volumeMounts:
+        - name: mysql-storage
+          mountPath: /var/lib/mysql
+        volumes:
+        - name: mysql-storage
+          persistentVolumeClaim:
+            claimName: mysql-pvc
+  ```
 
 ### StorageClass - 동적 프로비저닝 템플릿
 
 - PV를 동적으로 프로비저닝하는 템플릿이다. 클라우드별 드라이버/파라미터(EBS/EFS 등)를 정의한다.
 - 장점
 
-  - PVC 생성만으로 필요한 스토리지가 자동 생성되고 PV로 등록됨(사전 PV 준비 불필요)
-  - 클래스별 성능/비용 정책을 분리 운영(예: `gp3`, `io1` 등)
+- PVC 생성만으로 필요한 스토리지가 자동 생성되고 PV로 등록됨(사전 PV 준비 불필요)
+- 클래스별 성능/비용 정책을 분리 운영(예: `gp3`, `io1` 등)
 
 - 동적 프로비저닝 흐름(예: AWS EBS)
 
-  1. 개발자가 `storageClassName`을 지정해 PVC 생성(용량/접근 모드 포함)
-  2. StorageClass 컨트롤러가 AWS API를 호출해 EBS 볼륨 생성
-  3. 생성된 볼륨이 PV로 등록되고 PVC와 자동 바인딩
-  4. 파드가 해당 PVC를 마운트하여 사용
+1. 개발자가 `storageClassName`을 지정해 PVC 생성(용량/접근 모드 포함)
+2. StorageClass 컨트롤러가 AWS API를 호출해 EBS 볼륨 생성
+3. 생성된 볼륨이 PV로 등록되고 PVC와 자동 바인딩
+4. 파드가 해당 PVC를 마운트하여 사용
 
 - 접근 모드(Access Modes)
 
-  - ReadWriteOnce(RWO): 단일 노드에서 읽기/쓰기(예: EBS)
-  - ReadOnlyMany(ROX): 다수 노드에서 읽기 전용(예: EFS)
-  - ReadWriteMany(RWX): 다수 노드에서 읽기/쓰기(예: NFS, EFS)
+- ReadWriteOnce(RWO): 단일 노드에서 읽기/쓰기(예: EBS)
+- ReadOnlyMany(ROX): 다수 노드에서 읽기 전용(예: EFS)
+- ReadWriteMany(RWX): 다수 노드에서 읽기/쓰기(예: NFS, EFS)
 
 - 한눈에 보는 선택 가이드
-  - 단일 인스턴스 DB, 상태ful 워크로드 → EBS + RWO
-  - 여러 노드에서 공유 읽기/쓰기 필요 → EFS/NFS + RWX
-  - 단순 임시 캐시/작업 디렉터리 → emptyDir
+- 단일 인스턴스 DB, 상태ful 워크로드 → EBS + RWO
+- 여러 노드에서 공유 읽기/쓰기 필요 → EFS/NFS + RWX
+- 단순 임시 캐시/작업 디렉터리 → emptyDir
+
+---
+
+## 1-5. Namespace - 논리적 격리 단위
+
+### Namespace란?
+
+- 클러스터를 팀/프로젝트/환경별로 **논리적으로 분리**해 같은 물리적 클러스터를 안전하게 공유하게 한다.
+
+### 왜 쓰나요?
+
+1. 이름 충돌 방지: 서로 다른 팀이 같은 이름의 리소스를 만들어도 충돌 없음
+2. 리소스 관리: 팀/환경별 CPU·메모리 등 사용량 제한(Quota) 적용
+3. 접근 통제: RBAC으로 네임스페이스 단위 권한 부여(예: dev만 접근)
+4. 환경 분리: `dev`/`staging`/`prod`를 명확히 구분
+
+### 핵심 특징
+
+- 리소스 격리: 같은 이름의 리소스도 네임스페이스가 다르면 공존 가능
+- DNS 서비스 발견
+  - 같은 네임스페이스: `http://user-service`
+  - 다른 네임스페이스: `http://user-service.production.svc.cluster.local`
+- RBAC 연동: 네임스페이스별 세밀한 접근 권한 제어
+
+### 기본 네임스페이스
+
+- `default`: 기본 작업 네임스페이스
+- `kube-system`: Kubernetes 시스템 컴포넌트 실행 공간
+- `kube-public`: 전체 공개 읽기 가능(주로 클러스터 정보)
+- `kube-node-lease`: 노드 하트비트(Lease) 저장
+
+### 자주 쓰는 명령어
+
+```bash
+# 네임스페이스 목록/생성/삭제
+kubectl get ns
+kubectl create ns dev
+kubectl delete ns dev
+
+# 특정 네임스페이스에서 조회/배포
+kubectl get pods -n staging
+kubectl apply -f deployment.yaml -n staging
+```
+
+### 리소스 제한 예시(ResourceQuota, LimitRange)
+
+```yaml
+apiVersion: v1
+kind: ResourceQuota
+metadata:
+  name: team-a-quota
+  namespace: team-a
+spec:
+  hard:
+    requests.cpu: "4"
+    requests.memory: 8Gi
+    limits.cpu: "8"
+    limits.memory: 16Gi
+---
+apiVersion: v1
+kind: LimitRange
+metadata:
+  name: default-limits
+  namespace: team-a
+spec:
+  limits:
+    - default:
+        cpu: "1"
+        memory: 1Gi
+      defaultRequest:
+        cpu: "250m"
+        memory: 256Mi
+      type: Container
+```
+
+### 베스트 프랙티스
+
+- 환경/팀/프로덕트 기준으로 네임스페이스를 명확히 분리(`dev`, `staging`, `prod`, `team-a` 등)
+- 네임스페이스마다 기본 Quota/LimitRange를 설정해 과도한 사용 방지
+- RBAC을 네임스페이스 단위로 설계해 최소 권한 원칙 적용
+- 네임스페이스 명명 규칙을 표준화해 운영 혼란 최소화(예: `team-<name>-<env>`)
+
+---
