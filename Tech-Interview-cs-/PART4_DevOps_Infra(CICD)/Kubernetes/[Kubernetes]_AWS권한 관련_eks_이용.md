@@ -70,3 +70,152 @@ AMI 유형: AL2_x86_64
   - Ingress: 외부 트래픽 라우팅 규칙
 
   -> 빠른 상태 점검, 문제 발생 시 첫번째 확인 지점, 비개발자와의 소통
+
+---
+
+### 2_2. CLI 환경 설정 - kubectl을 사용할 수 있는 환경 구축
+
+- 로컬 개발 환경에서 `kubectl`로 EKS 클러스터를 제어할 수 있도록 기본 CLI들을 설치·구성한다.
+
+필수 도구(요약)
+
+- AWS CLI: IAM 기반 인증·권한으로 EKS에 접근하기 위한 필수 도구
+- kubectl: Kubernetes CLI
+- eksctl: EKS 전용 관리 도구(클러스터/노드그룹 생성·관리)
+
+1. AWS CLI 설치
+
+- 역할: 로컬 사용자가 유효한 IAM 주체임을 증명하고, EKS 인증 토큰 등을 발급받는 데 사용한다.
+
+- macOS
+
+```bash
+# Homebrew 권장
+brew install awscli
+
+# 또는 공식 패키지 설치
+curl "https://awscli.amazonaws.com/AWSCLIV2.pkg" -o "AWSCLIV2.pkg"
+sudo installer -pkg AWSCLIV2.pkg -target /
+
+# 설치 확인
+aws --version
+```
+
+- Linux
+
+```bash
+# Ubuntu/Debian
+sudo apt update
+sudo apt install -y awscli unzip
+
+# 또는 최신 버전 수동 설치(x86_64)
+curl "https://awscli.amazonaws.com/awscli-exe-linux-x86_64.zip" -o "awscliv2.zip"
+unzip awscliv2.zip
+sudo ./aws/install
+
+aws --version
+```
+
+- Windows
+  - MSI 설치 프로그램 사용(공식 문서): [AWS CLI 설치 가이드](https://docs.aws.amazon.com/ko_kr/cli/latest/userguide/getting-started-install.html)
+  - 설치 후 PowerShell에서 `aws --version`으로 확인
+
+2. kubectl 설치
+
+- macOS
+
+```bash
+# Homebrew
+brew install kubectl
+
+# 직접 다운로드(아키텍처에 맞춰 선택)
+# Apple Silicon: darwin/arm64, Intel: darwin/amd64
+ARCH=$(uname -m)
+if [ "$ARCH" = "arm64" ]; then KARCH=arm64; else KARCH=amd64; fi
+curl -LO "https://dl.k8s.io/release/$(curl -L -s https://dl.k8s.io/release/stable.txt)/bin/darwin/${KARCH}/kubectl"
+chmod +x kubectl && sudo mv kubectl /usr/local/bin/kubectl
+
+kubectl version --client --output=yaml
+```
+
+- Linux
+
+```bash
+# 아키텍처에 맞춰 선택(예: amd64, arm64)
+ARCH=amd64
+curl -LO "https://dl.k8s.io/release/$(curl -L -s https://dl.k8s.io/release/stable.txt)/bin/linux/${ARCH}/kubectl"
+sudo install -o root -g root -m 0755 kubectl /usr/local/bin/kubectl
+
+# 또는 패키지 관리자 사용(Ubuntu)
+sudo apt-get update && sudo apt-get install -y kubectl
+
+kubectl version --client --output=yaml
+```
+
+- Windows(선택)
+  - `choco install kubernetes-cli` 또는 `scoop install kubectl`
+
+3. eksctl 설치
+
+- 역할: EKS 클러스터/노드그룹 생성·업그레이드 등 선언적 관리.
+
+```bash
+# macOS
+brew tap weaveworks/tap
+brew install weaveworks/tap/eksctl
+
+# Linux(x86_64)
+curl --silent --location "https://github.com/weaveworks/eksctl/releases/latest/download/eksctl_$(uname -s)_amd64.tar.gz" | tar xz -C /tmp
+sudo mv /tmp/eksctl /usr/local/bin
+
+# 설치 확인
+eksctl version
+```
+
+4. AWS 자격 증명 구성
+
+```bash
+# 대화형 구성(프로파일 생성)
+aws configure --profile my-admin
+
+# 입력 예시
+# AWS Access Key ID [None]: <YOUR_ACCESS_KEY>
+# AWS Secret Access Key [None]: <YOUR_SECRET_KEY>
+# Default region name [None]: ap-northeast-2
+# Default output format [None]: json
+
+# 현재 자격 확인(프로파일 지정)
+aws sts get-caller-identity --profile my-admin
+```
+
+- 자주 쓰는 팁
+  - 프로파일 사용: 매 명령어에 `--profile my-admin` 추가 또는 `export AWS_PROFILE=my-admin`
+  - 환경변수(CI/CD 등)
+    ```bash
+    export AWS_ACCESS_KEY_ID=your-access-key
+    export AWS_SECRET_ACCESS_KEY=your-secret-key
+    export AWS_DEFAULT_REGION=ap-northeast-2
+    ```
+  - 자격 파일 위치: `~/.aws/credentials`, 설정: `~/.aws/config`
+  - MFA/SSO를 쓰는 조직이라면: `aws configure sso` 또는 `aws sso login --profile <PROFILE>` 후 사용
+
+5. 빠른 동작 확인(필수 체크리스트)
+
+```bash
+# 1) 버전 확인
+aws --version
+kubectl version --client --short
+eksctl version
+
+# 2) 내 자격/권한 확인
+aws sts get-caller-identity --profile my-admin
+
+# 3) EKS 조회 & kubeconfig 연결(권한 있어야 성공)
+aws eks list-clusters --region ap-northeast-2 --profile my-admin
+aws eks update-kubeconfig --name <CLUSTER_NAME> --region ap-northeast-2 --profile my-admin
+
+# 4) kubectl로 클러스터 통신 확인
+kubectl config current-context
+kubectl get nodes -o wide
+kubectl get ns
+```
