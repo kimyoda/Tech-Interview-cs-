@@ -113,12 +113,79 @@ Allocatable:
 
 1. Capcity (물리적 하드웨어 사양)
 
+- 이 Node가 가진 실제 하드웨어 리소스 총량이다.
+  - cpu 4: 4개의 CPU 코어
+  - memory: 16GI -> 16GB RAM
+  - ephemeral-storage:100Gi-> 임시 저장소(컨테이어 레이어, 로그 등)
+  - pods:110 -> Node에 최대 띄울 수 있는 Pod 개수
+
 2. Allocatable (실제 할당 가능한 리소스)
+
+- Capacity에 시스템 예약분을 제외하고 Pod들에 실제로 할당 가능한 리소스이다.
+
+```bash
+Allocatable = Capacity - System REserved - Eviction Threshold
+```
+
+- cpu:3800m -> 4000m 중 3.8 코어만 Pod들에 할당이 가능하다.
+- memory:15Gi -> 16Gi 중 15Gi만 할당이 가능하다.
+- 나머지 200m CPU, 1Gi 메모리는 시스템이 사용한다.
+  💡 스케줄링 기준: 쿠버네티스 스케줄러는 Allocatable 기준으로 Pod을 배치합니다.
 
 3. AllocatedResources (현재 할당된 리소스 현황)
 
+#### 예시
+
+```bash
+Allocated resources:
+  (Total limits may be over 100 percent, i.e., overcommitted.)
+  Resource           Requests      Limits
+  --------           --------      ------
+  cpu                2400m (63%)   4500m (118%)
+  memory             10Gi (66%)    18Gi (120%)
+```
+
+Requests
+
+- cpu:2400m(64%) -> Allocatable 3800m 중 2400m이 이미 예약
+- memory:10Gi(66%) -> Allocatable 15Gi 중 10Gi가 예약
+- CPU 1400m, 메모리 5Gi
+  Limits
+- cpu:4500m(118%) -> Allocatable 18%초과 (Overcommit)
+- memory:18Gi(120%) -> Allocatable 20$초과 (Overcommit)
+
 4. 실제 Pod 할당 현황(예시)
+   예시
+
+```bash
+Namespace    Name                          CPU Requests  CPU Limits  Memory Requests  Memory Limits  Age
+---------    ----                          ------------  ----------  ---------------  -------------  ---
+production   myapp-api-7d9f8c6b5a-x7k2m    300m (7%)     500m (13%)  512Mi (3%)       1Gi (6%)       2d
+production   myapp-batch-8f5a3c9d2b-p9n4k  500m (13%)    1000m (26%) 1Gi (6%)         2Gi (13%)      2d
+dev          test-app-6c8d7e4f3a-m2k8j     100m (2%)     200m (5%)   256Mi (1%)       512Mi (3%)     5h
+```
+
+- 각 Pod이 Node에 차지하고 있는 리소스 비율을 확인할 수 있다.
+- Allocatable 대비 비율이다.
 
 ---
 
 ## Requests & Limits 체크
+
+```yaml
+resources:
+  requests:
+    cpu: 300m # 최소 보장 리소스
+    memory: 512Mi
+  limits:
+    cpu: 500m # 최대 사용 가능 리소스
+    memory: 1Gi
+```
+
+#### Requests (요청 리소스)
+
+#### Limits (제한 리소스)
+
+---
+
+## 📚 참고: 단위 표기법
