@@ -83,14 +83,143 @@ class CalculatorTest extends TestCase {
 
 - PHPUnit 테스트 캘르스는 `TestCase`를 상속받아 작성되고, 각 테스트 메소드는 `test`로 시작한다. 아래는 자주 사용되는 메소드들이다.
 
-- `setUp()`:
-- `tearDown()`:
-- `assertEquals()`:
-- `assertTrue()/ assertFalse`:
-- `assertNotEmpty()/ assertEmpty()`:
-- `assertInstanceOf()`:
-- `assertThrows()`:
-- `aassertNull/assertNotNull()`:
-- `assertCount()`:
-- `assertContains()`:
-- `expectException()`:
+- `setUp()`: 각 테스트 메소드 전에 실행되는 초기화 메소드, 테스트 환경을 준비한다.(사용자 인스턴스를 미리 만들어 중복 코드를 피한다)
+
+```php
+protected function setup(): void
+{
+    $this->calculator = new Calculator();
+}
+```
+
+- `tearDown()`: 각 테스트 후 실행되는 정리 메소드, 리소스를 해제한다.(임시 파일 삭제 등), 테스트 후 객체 삭제로 메모리를 정리한다.
+
+```php
+protected function tearDown(): void
+{
+    unset($this->calculator);
+}
+
+```
+
+- `assertEquals($expected, $actual)`: 예상 값과 실제 값이 같은지 검증한다. 가장 기본적인 어설션이다.
+  - 계산결과 예상과 같은지
+  - 저장된 데이터가 입력값과 같은지
+  - API 응답이 기대값과 같은지
+
+```php
+self::assertEquals(5, $this->calculator->add(2, 3)); // 2 + 3 = 5 인지 확인
+```
+
+- `assertTrue($condition)/ assertFalse($condition)`: 조건이 참, 거짓인지 확인한다.
+  - 로그인 성공, 실패 여부
+  - 권한 체크 결과
+  - 유효성 검사 통과/실패
+
+```php
+self:assertTrue($this->calculator->isPositive(5)); // 5가 양수인지 확인
+```
+
+- `assertNotEmpty()/ assertEmpty()`: 값이 비어있지 않은지, 들어 있는지 확인한다.
+
+```php
+self::assertNotEmpty($this->calcualtor->getHistory()); // 계산 기록 배열이 비어 있지 않은지 확인
+```
+
+- `assertInstanceOf()`: 객체가 특정 클래스 인스턴스인지
+
+```php
+self::assertInstanceOf(Calculator::class, $this->calculator); // 객체가 Calculator 클래스인지 확인
+```
+
+- `assertThrows($exceptionClass, $callback)`: 예외가 발생하는 지 확인
+
+```php
+self::assertThrows(InvalidArgumentException::class, function( { $this->calculator->add('a', 3); })); // 문자열 입력 시 예외 발생 확인s
+```
+
+- `aassertNull/assertNotNull()`: 값이 비어있는 지 확인한다.
+  - 데이터가 삭제되었는 지 확인
+  - 조회 결과가 존재하는지 확인
+  - 선택적 필드가 비어있는 지 확인
+
+```php
+assertNull($variable, $message = '')
+assertNotNull($variable, $message = '')
+
+$user = User::factory()->create();
+$userId = $user->id;
+
+$user->delete();
+$deletedUser = User::find($userId);
+$this->assertNull($deletedUser);
+```
+
+- `assertCount()`: 개수를 확인한다.
+  - 배열이나 컬렉션의 크기 확인
+  - 검색 결과 개수 확인
+  - 목록의 아이템 수 확인 등
+
+```php
+assertCount($expectedCount, $haystack, $message = '')
+
+public function testCartItemCount()
+{
+    $cart = new ShoppingCart();
+    $cart->addItem('상품A');
+    $cart->addItem('상품B');
+    $cart->addItem('상품C');
+
+    $this->assertCount(3, $cart->getItems());
+    // 장바구니에 3개의 상품이 있는 지 확인s
+}
+```
+
+- `assertContains()/assertNotContains()`: 포함 여부를 확인한다
+  - 배열에 특정 값이 있는 지 확인
+  - 권한 목록에 특정 권한이 있는 지 확인
+  - 태그 목록에 특정 태그가 있는지
+
+```php
+assertContains($needle, $haystack, $message = '')
+assertNotContains($needle, $haystack, $message = '')
+
+// 권한 확인
+public function testUserPermissions()
+{
+    $admin = User::factory()->admin()->create();
+    $permissions = $admin->getPermissions();
+
+    $this->assertContains('delete_user', $permissions);
+    // 관리자 권한 목록에 delete_user가 있어야 한다
+
+    $this->assertNotContains('edit_post', $permissions);
+    // 관리자 권한 목록에 edit_post가 없어야 한다.
+}
+```
+
+- `assertGreaterThan()/assertLesThan()`: 크기비교
+  - 숫자 값의 범위 확인
+  - 날짜 비교
+  - 성능 측정
+
+```php
+// 시간 확인
+public function testCreatedAtIsRecent()
+{
+    $user = User::factory()->create();
+
+    $fiveMinutesAgo = now()->subaMinutes(5);
+
+    $this-.assertGreaterThan($fiveMinutesAgo, $user->created_at);
+
+    // 생성 시간이 5분전보다 최근이어야 한다.s
+}
+```
+
+- 위의 방식으로 '단위 테스트'를 구현한다.
+- 단위 테스트는 코드의 가장 작은 단위(함수, 메소드)를 독립적으로 검증하고, 전체 시스템의 안전성을 쌓아간다.
+
+---
+
+## 4. 테스트 코드 구성
