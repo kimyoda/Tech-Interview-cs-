@@ -152,4 +152,72 @@ const byFloor = _.groupBy(numbers, Math.floor);
 // { '4': [4.2], '6': [6.1, 6.3] }
 ```
 
-## -> 해당 함수들은 데이터 조작, 이벤트 핸들링, 성능 최적화에 유용하다. 더 많은 함수는 Lodash 공식 문서에서 확인하길 바란다.
+-> 해당 함수들은 데이터 조작, 이벤트 핸들링, 성능 최적화에 유용하다. 더 많은 함수는 Lodash 공식 문서에서 확인하길 바란다.
+
+---
+
+## 3. 실제 예시
+
+1. 쇼핑몰 데이터 처리
+
+```js
+const orders = [
+  {id: 1, customer: 'Alice', amount: 150, status: 'completed'}
+  {id: 2, customer: 'Bob', amount: 200, status: 'pending'}
+  {id: 3, customer: 'Alice', amount: 80, status: 'completed'}
+];
+
+// 고객별로 그룹화
+const byCustomer = _.groupBy(orders, 'customer');
+
+// 완료된 주문만 필터링
+const completed = _.filter(orders, { status: 'completed'});
+
+// 총 금액 계산
+const totalAmount = _.sumBy(completed, 'amount'); // 230
+```
+
+2. 유효성 검사 최적화
+
+```js
+const validateFomr = (formData) => {
+  // 비율이 큰 유효성 검사 로직
+  console.log("검사 중...", formData);
+};
+
+// 사용자가 입력할 때마다가 아닌, 입력을 멈춘 후에만 검사
+const debouncedValidate = _.debounce(validateForm, 500);
+
+formInput.addEventListener("change", (e) => {
+  debouncedValidate(e.target.value);
+});
+```
+
+---
+
+### 4. 대안 라이브러리
+
+1. es-toolkit
+   - Lodash보다 더 작은 번들크기
+   - ES6+ 활용, 강력한 TypeScript 지원, Lodash와 호환
+
+```js
+import { groupBy, debounce } from "es-toolkit";
+```
+
+2. Ramada
+   - 순수 함수형 프로그래밍 중심
+   - 불변성을 강조하고 데이터를 마지막 인자로 받는다.
+
+```js
+import R from "remda";
+
+const getActiveUsers = R.filter(R.propEq("active", true));
+const users = [{ name: "John", active: true }];
+getActiveUsers(users);
+```
+
+3. Underscore.js
+   - Lodash 기반 라이브러리
+   - 가볍지만 Lodash보다 기능과 성능이 약간 떨어진다
+   - 최소 기능만 필요한 경우에 사용한다.
