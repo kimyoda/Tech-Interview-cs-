@@ -221,3 +221,44 @@ getActiveUsers(users);
    - Lodash 기반 라이브러리
    - 가볍지만 Lodash보다 기능과 성능이 약간 떨어진다
    - 최소 기능만 필요한 경우에 사용한다.
+
+---
+
+### 5. 관련 참고 사이트
+
+- [Lodash 공식 위키 (Resources)](https://github.com/lodash/lodash/wiki/Resources): Lodash의 실무 적용 가이드. "Lodash in the Real World" 섹션에서 체이닝, 마이크로-라이브러리 사용 예제. GitHub에서 클론해 참고.
+
+- [You-Dont-Need-Lodash-Underscore](https://github.com/you-dont-need/You-Dont-Need-Lodash-Underscore): Lodash 함수를 네이티브 JS로 대체하는 실례 코드. 실제 프로젝트에서 Lodash를 제거한 사례 공유.
+
+- [Using Lodash for fun and profit (PhiLhoSoft Blog)](https://philhosoft.github.io/Programming/Using-Lodash-for-fun-and-profit/): Lodash를 활용한 함수형 코딩 스타일 실례. 일반 목적 함수 예제.
+
+- [Some common use cases of lodash in Node.js (Medium)](https://medium.com/deno-the-complete-reference/some-common-use-cases-of-lodash-in-node-js-cc3a7b6981f5): Node.js에서 10가지 실무 사례 (데이터 그룹화, 디바운스 등).
+
+- [Real-World JavaScript Anti-Patterns (Part Two)](https://blog.javascripting.com/2015/01/12/real-world-javascript-anti-patterns-part-two/): jQuery/Lodash 사용 안티패턴과 최적화 사례.
+
+- [It's time to let go of lodash (JS.dev Blog)](https://thejs.dev/jmitchell/its-time-to-let-go-of-lodash-nqc/): Lodash에서 네이티브 JS로 전환 사례.
+
+- [Lodash: A modern JavaScript Utility library (SudheerJonna Blog)](https://sudheerjonna.com/blog/2017/10/30/lodash-a-modern-javascript-utility-library/): Lodash를 활용한 함수형 패러다임 실례.
+
+---
+
+### 6. Lodash의 단점
+
+- Lodash는 여전히 좋은 라이브러리지만, 현재 기준으로 JavaScript 환경에서 몇 가지 단점이 있다. JS 생태계의 변화에 따라 달라지는 현상이다.
+
+  1. 번들 크기와 성능 오버헤드:
+
+  - Lodash를 임포트하면 앱 번들 크기가 불필요하게 커져 로딩 시간이 길어질 수 있다. React같은 SPA에서는 문제가 될 수 있고, JS자체를 쓰는것보다 무거운 경우가 발생한다.
+  - `import { map } from 'lodash-es'를 하여, map 함수와 의준성을 포함해 KB가 추가되어 최근 성능 최적화 면에서는 낭비로 생각될 수있다.
+
+  2. 네이티브 JS 기능으로 대체 가능:
+
+  - Optional Chaining (?.): Lodash의 \_.get(obj, 'a.b.c')은 obj?.a?.b?.c로 거의 완벽하게 대체되었습니다.
+  - map, filter, reduce, find: 이젠 네이티브 JS로 쓰는게 더 편하다고 생각한다.
+  - ES6+ 이후 JS가 많이 발전하여 네이티브만 사용해도 충분하다는 의견도 있다.
+
+  3. 타입스크립트 친화성 부족:
+
+  - @types/lodash 타입지원은 괜찮나 flow, compose 같은 복잡한 함수형 패턴에서 타입 추론이 아쉬 울 수 있다.
+
+-> 즉, 간단한 작업으로 가능하나 코드가 복잡해지고 학습하는 시간이 오래걸릴 수 있다는 단점이 있다고 생각한다.
