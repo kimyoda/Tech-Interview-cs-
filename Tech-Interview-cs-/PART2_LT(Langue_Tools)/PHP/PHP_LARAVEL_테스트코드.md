@@ -223,3 +223,191 @@ public function testCreatedAtIsRecent()
 ---
 
 ## 4. 테스트 코드 구성
+
+- 구성에 관한 구조는 아래와 같은 느낌이다.
+
+- 클래스 구조: 하나의 클래스 per 기능 모듈(CalcualtorTest, LevelUpTest 등)
+- 메소드 네이밍: `test[기능][조건] 형식
+- Given-When-Then 패턴
+  - Given: 테스트 환경 준비(setUp또는 메소드 내)
+  - When: 액션을 실행(메소드 호출)
+  - Then: 결과 검증(assert 사용)
+- 커버 목표: 80%이나 웬만하면 100% 달성
+- 모킹: 외부 의존성(DB)를 가짜 객체 및 상황에 맞는 객체로 ㅐ체한다.
+- 보통 단위테스트 별로 하나 통합 테스트를 하는 경우도 있다.
+
+### 4-1. setUp() - 각 테스트 전에 실행한다.
+
+- 모든 테스트가 공통으로 필요한 객체를 생성한다.
+- 테스트 데이터를 준비한다.
+- DB 연결 설정을 한다
+
+```php
+protected function setUp(): void
+{
+    parent::setUp();
+    // 여기에 준비 코드
+}
+
+class UserServiceTest extends TestCase
+{
+    private $userService;
+    private $testUser;
+
+    // 🎬 각 테스트 전에 실행됨
+    protected function setUp(): void
+    {
+        parent::setUp();
+
+        // 공통으로 사용할 서비스 생성
+        $this->userService = new UserService();
+
+        // 테스트용 사용자 생성
+        $this->testUser = User::factory()->create([
+            'email' => 'test@example.com',
+            'name' => 'Test User'
+        ]);
+    }
+
+}
+```
+
+### 4-2. tearDown() - 각 테스트 후에 실행한다
+
+- 테스트 후 데이터를 정리한다
+- 연결을 종료한다
+- 임시 파일을 삭제한다
+
+```php
+protected function tearDown(): void
+{
+    // 여기에 정리 코드
+    parent::tearDown();
+}
+
+class FileUploadTest extends TestCase
+{
+    private $uploadPath = '/tmp/test_uploads';
+
+    protected function setUp(): void
+    {
+        parent::setUp();
+
+        // 테스트용 업로드 디렉토리 생성
+        if (!file_exists($this->uploadPath)) {
+            mkdir($this->uploadPath);
+        }
+    }
+
+    // 🧹 각 테스트 후에 실행됨
+    protected function tearDown(): void
+    {
+        // 테스트 중 생성된 파일 모두 삭제
+        $files = glob($this->uploadPath . '/*');
+        foreach ($files as $file) {
+            if (is_file($file)) {
+                unlink($file);
+            }
+        }
+
+        // 디렉토리 삭제
+        if (file_exists($this->uploadPath)) {
+            rmdir($this->uploadPath);
+        }
+
+        parent::tearDown();
+    }
+}
+```
+
+### 5. 예제
+
+- 내가 회사에서 작성한 코드들은 공개할 수 없어 간단한 테스트 사례를 작성하였다.
+
+```php
+// 가상의 Calculator 클래스 (테스트 대상)
+class Calculator {
+    public function add($a, $b) {
+        if (!is_numeric($a) || !is_numeric($b)) {
+            throw new InvalidArgumentException('Numbers only');
+        }
+        return $a + $b;
+    }
+}
+
+// 테스트 클래스
+class CalculatorTest extends TestCase
+{
+    protected $calculator;
+
+    protected function setUp(): void
+    {
+        $this->calculator = new Calculator();  // 초기화
+    }
+
+    public function testAddWithPositiveNumbers()
+    {
+        // Given: 숫자 준비 (이미 setUp에서 객체 준비됨)
+        $a = 2;
+        $b = 3;
+
+        // When: 더하기 호출
+        $result = $this->calculator->add($a, $b);
+
+        // Then: 결과 검증
+        self::assertEquals(5, $result);  // 2+3=5 확인
+        self::assertTrue($result > 0);   // 양수 확인
+    }
+
+    public function testAddWithNegativeNumbers()
+    {
+        // Given: 음수 준비
+        $a = -1;
+        $b = -2;
+
+        // When: 호출
+        $result = $this->calculator->add($a, $b);
+
+        // Then: 검증
+        self::assertEquals(-3, $result);
+        self::assertFalse($result > 0);  // 양수가 아님 확인
+    }
+
+    public function testAddThrowsExceptionOnInvalidInput()
+    {
+        // Given/When/Then: 예외 테스트
+        self::assertThrows(InvalidArgumentException::class, function() {
+            $this->calculator->add('a', 3);  // 문자열 입력
+        });
+    }
+
+    /**
+     * @dataProvider invalidAdditionProvider
+     */
+    public function testAddWithDataProvider($a, $b, $expected)
+    {
+        // When/Then: 여러 데이터로 테스트
+        self::assertEquals($expected, $this->calculator->add($a, $b));
+    }
+
+    public function invalidAdditionProvider()
+    {
+        return [
+            [1, 1, 2],  // 성공 케이스
+            [10, 20, 30]  // 또 다른 성공 케이스
+        ];
+    }
+}
+```
+
+- setUp(): 모든 테스트에서 Calculator 객체를 공유해 중복을 피한다.
+- testAddWithPositiveNumbers(): 기본 성공 케이스, Given(숫자), When(호출), Then(assert) 패턴이다.
+- testAddWithNegativeNumbers(): 엣지 케이스, 음수 테스트로 작동을 확인한다.
+- testAddThrowsExceptionOnlyvalidainput(): 예외 처리를 검증하여 실무에서 입력이 오류되는 경우를 방지한다.
+- 해당 테스트를 통해 Calculator 로직이 변경 될 때 해당 테스트를 돌려 기존 더하기 기능이 안깨지늕지 확인할 수 있다.
+
+### 6. 테스트를 습관화하는 이유
+
+- 실무적으로 기능을 적용하기 전에 테스트 코드들을 통해서 기능들이 안정적으로 작동하는 지 에러가 나면 어디 부분에서 어떤 로직에서 문제인지, db 값이 없어서 문제인지 미리 확인하여 해당 부분을 대비하고 준비할 수 있다.
+- 이번에 업무를 하면서 예외 처리 사항이나 각 기능들에 경우의 수를 체크하여 적용하였고, 현재까지 잘 작동되는 것을 확인할 수 있었다.
+- 이후, 자바스크립트나 react에서의 테스트 코드를 어떻게 활용 하는 지도 알아보고자 한다.
