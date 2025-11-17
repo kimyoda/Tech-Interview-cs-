@@ -152,6 +152,161 @@ const byFloor = _.groupBy(numbers, Math.floor);
 // { '4': [4.2], '6': [6.1, 6.3] }
 ```
 
+7.\_.chunk(array, [size=1])
+
+- 배열을 일정 크기(size)로 잘라서 "배열의 배열"로 만든다.
+- 균등하게 안 나누어지면 마지막 chunk는 남은 원소만 갖는다.
+- 페이지네이션: 리스트를 10개 씩 끊어서 보여줄 때 등
+
+```js
+_.chunk(["a", "b", "c", "d"], 2);
+// -> [['a', 'b'], 'c', 'd']]
+
+_.chunk(["a", "b", "c", "d"], 3);
+// -> [['a', 'b', 'c'], ['d]]
+
+const array = [1, 2, 3, 4, 5, 6];
+console.log(_.chunk(array, 2));
+// [[1, 2]], [3, 4], [5, 6]]
+```
+
+8.\_.difference(array, [values])
+
+- 첫 번째 배열에서, 두 번째 이후 배열에 포함되지 않은 요소들만 남긴다.
+- A - B 집합에서 차집합 느낌이다.
+- 선택된 항목 / 선택 해제된 항목을 계산
+
+```js
+_.difference([2, 1], [2, 3]);
+// => [1]
+
+const array1 = [1, 2, 3, 4];
+const array2 = [2, 4];
+
+console.log(_.difference(array1, array2));
+// [1, 3]
+```
+
+9.\_.uniq(array) / \_.uniqBy(array, iteratee)
+
+- 중복제거용
+- `uniq`는 원시값(숫자, 문자열 등) 배열에서 중복 제거
+- `uniqBy`는 객체 배열에서 특정 키 기준으로 중복을 제거
+- 태그 / 카테고리 목록 중복제거
+
+```js
+const array = [2, 1, 2, 3, 1, 4, 5, 3];
+
+_.uniq(array);
+// -> [2, 1, 3, 4, 5]
+
+const users = [
+  { id: 1, name: "kim" },
+  { id: 1, name: "kim" },
+  { id: 2, name: "lee" },
+];
+
+// id 기준으로 유니크
+const uniqueUsers = _.uniqBy(users, "id");
+// -> [ {id: 1, name: 'kim'}, { id: 2, name: 'lee'}]
+```
+
+9.\_.uniq(array) / \_.uniqBy(array, iteratee)
+
+- 중복제거용
+- `uniq`는 원시값(숫자, 문자열 등) 배열에서 중복 제거
+- `uniqBy`는 객체 배열에서 특정 키 기준으로 중복을 제거
+- 태그 / 카테고리 목록 중복제거
+
+```js
+const array = [2, 1, 2, 3, 1, 4, 5, 3];
+
+_.uniq(array);
+// -> [2, 1, 3, 4, 5]
+
+const users = [
+  { id: 1, name: "kim" },
+  { id: 1, name: "kim" },
+  { id: 2, name: "lee" },
+];
+
+// id 기준으로 유니크
+const uniqueUsers = _.uniqBy(users, "id");
+// -> [ {id: 1, name: 'kim'}, { id: 2, name: 'lee'}]
+```
+
+9.\_.uniq(array) / \_.uniqBy(array, iteratee)
+
+- 중복제거용
+- `uniq`는 원시값(숫자, 문자열 등) 배열에서 중복 제거
+- `uniqBy`는 객체 배열에서 특정 키 기준으로 중복을 제거
+- 태그 / 카테고리 목록 중복제거
+
+```js
+const array = [2, 1, 2, 3, 1, 4, 5, 3];
+
+_.uniq(array);
+// -> [2, 1, 3, 4, 5]
+
+const users = [
+  { id: 1, name: "kim" },
+  { id: 1, name: "kim" },
+  { id: 2, name: "lee" },
+];
+
+// id 기준으로 유니크
+const uniqueUsers = _.uniqBy(users, "id");
+// -> [ {id: 1, name: 'kim'}, { id: 2, name: 'lee'}]
+```
+
+9.\_.uniq(array) / \_.uniqBy(array, iteratee)
+
+- 중복제거용
+- `uniq`는 원시값(숫자, 문자열 등) 배열에서 중복 제거
+- `uniqBy`는 객체 배열에서 특정 키 기준으로 중복을 제거
+- 태그 / 카테고리 목록 중복제거
+
+```js
+const array = [2, 1, 2, 3, 1, 4, 5, 3];
+
+_.uniq(array);
+// -> [2, 1, 3, 4, 5]
+
+const users = [
+  { id: 1, name: "kim" },
+  { id: 1, name: "kim" },
+  { id: 2, name: "lee" },
+];
+
+// id 기준으로 유니크
+const uniqueUsers = _.uniqBy(users, "id");
+// -> [ {id: 1, name: 'kim'}, { id: 2, name: 'lee'}]
+```
+
+9.\_.uniq(array) / \_.uniqBy(array, iteratee)
+
+- 중복제거용
+- `uniq`는 원시값(숫자, 문자열 등) 배열에서 중복 제거
+- `uniqBy`는 객체 배열에서 특정 키 기준으로 중복을 제거
+- 태그 / 카테고리 목록 중복제거
+
+```js
+const array = [2, 1, 2, 3, 1, 4, 5, 3];
+
+_.uniq(array);
+// -> [2, 1, 3, 4, 5]
+
+const users = [
+  { id: 1, name: "kim" },
+  { id: 1, name: "kim" },
+  { id: 2, name: "lee" },
+];
+
+// id 기준으로 유니크
+const uniqueUsers = _.uniqBy(users, "id");
+// -> [ {id: 1, name: 'kim'}, { id: 2, name: 'lee'}]
+```
+
 -> 해당 함수들은 데이터 조작, 이벤트 핸들링, 성능 최적화에 유용하다. 더 많은 함수는 Lodash 공식 문서에서 확인하길 바란다.
 
 ---
