@@ -152,6 +152,180 @@ const byFloor = _.groupBy(numbers, Math.floor);
 // { '4': [4.2], '6': [6.1, 6.3] }
 ```
 
+7.\_.chunk(array, [size=1])
+
+- 배열을 일정 크기(size)로 잘라서 "배열의 배열"로 만든다.
+- 균등하게 안 나누어지면 마지막 chunk는 남은 원소만 갖는다.
+- 페이지네이션: 리스트를 10개 씩 끊어서 보여줄 때 등
+
+```js
+_.chunk(["a", "b", "c", "d"], 2);
+// -> [['a', 'b'], 'c', 'd']]
+
+_.chunk(["a", "b", "c", "d"], 3);
+// -> [['a', 'b', 'c'], ['d]]
+
+const array = [1, 2, 3, 4, 5, 6];
+console.log(_.chunk(array, 2));
+// [[1, 2]], [3, 4], [5, 6]]
+```
+
+8.\_.difference(array, [values])
+
+- 첫 번째 배열에서, 두 번째 이후 배열에 포함되지 않은 요소들만 남긴다.
+- A - B 집합에서 차집합 느낌이다.
+- 선택된 항목 / 선택 해제된 항목을 계산
+
+```js
+_.difference([2, 1], [2, 3]);
+// => [1]
+
+const array1 = [1, 2, 3, 4];
+const array2 = [2, 4];
+
+console.log(_.difference(array1, array2));
+// [1, 3]
+```
+
+9.\_.uniq(array) / \_.uniqBy(array, iteratee)
+
+- 중복제거용
+- `uniq`는 원시값(숫자, 문자열 등) 배열에서 중복 제거
+- `uniqBy`는 객체 배열에서 특정 키 기준으로 중복을 제거
+- 태그 / 카테고리 목록 중복제거
+
+```js
+const array = [2, 1, 2, 3, 1, 4, 5, 3];
+
+_.uniq(array);
+// -> [2, 1, 3, 4, 5]
+
+const users = [
+  { id: 1, name: "kim" },
+  { id: 1, name: "kim" },
+  { id: 2, name: "lee" },
+];
+
+// id 기준으로 유니크
+const uniqueUsers = _.uniqBy(users, "id");
+// -> [ {id: 1, name: 'kim'}, { id: 2, name: 'lee'}]
+```
+
+9.\_.uniq(array) / \_.uniqBy(array, iteratee)
+
+- 중복제거용
+- `uniq`는 원시값(숫자, 문자열 등) 배열에서 중복 제거
+- `uniqBy`는 객체 배열에서 특정 키 기준으로 중복을 제거
+- 태그 / 카테고리 목록 중복제거
+
+```js
+const array = [2, 1, 2, 3, 1, 4, 5, 3];
+
+_.uniq(array);
+// -> [2, 1, 3, 4, 5]
+
+const users = [
+  { id: 1, name: "kim" },
+  { id: 1, name: "kim" },
+  { id: 2, name: "lee" },
+];
+
+// id 기준으로 유니크
+const uniqueUsers = _.uniqBy(users, "id");
+// -> [ {id: 1, name: 'kim'}, { id: 2, name: 'lee'}]
+```
+
+10.\_.flatten(array) / \_.flattenDeep(array)
+
+- 중첩 배열을 평탄화
+- `flattten`: 한 단계만
+- `flattenDeep`: 끝까지 전부 핀다
+- `chunk`를 반대로 되돌릴 때
+- 특정 로직에서 배열 안에 배열이 섞여 있을 때, 한 줄 짜리 배열로 만들어 처리하고 싶을 때
+
+```js
+_.flatten([1, [2, 3], [(4)[5]]]);
+// -> [1, 2, 3, 4, [5]]
+
+_.flattenDeep([1, [2, 3], [4, [5]]]);
+// -> [1, 2, 3, 4, 5]
+```
+
+11.\_.merge(object, sources...)
+
+- 깊은 병합
+- 여러 객체를 재귀적으로 합친다
+- 같은 키가 있으면 뒤에 오는 객체 값이 덮어쓴다. 중첩객체까지 깊게 병합한다.
+
+```js
+const defaultConfig = {
+  api: { host: "localhost", port: 3000 },
+  theme: { color: "blue" },
+};
+
+const userConfig = {
+  aapi: { port: 8000 },
+};
+
+const merged = _.merge({}, defaultConfig, userConfig);
+// 첫 인자로 {}를 넣어야 원본이 안변한다.
+console.log(merged);
+// {
+//   api: { host: 'localhost', port: 8080 },
+//   theme: { color: 'blue' },
+// }
+```
+
+12\_.find(collection, predicate)
+
+- 조건을 만족하는 "첫 번째 요소"를 반환한다.
+- 없으면 undefined
+- 상세 페이지용 데이터 한 개 찾기
+- 특정 조건에 맞는 첫 번째 아이템 찾을 때 (id, status, flag 등)
+
+```js
+const users = [
+  { id: 1, name: "kim", active: false },
+  { id: 2, name: "lee", active: true },
+];
+
+const activeUser = _.find(users, { active: true });
+// -> { id: 2, name: 'lee', active: true}
+
+const user2 = _.find(users, (u) => u.id === 2);
+// -> { id: 2, name: 'lee', active: true }
+```
+
+13.\_.every(collection, predicate)
+
+- 모든 요소가 조건을 만족하면 true, 하나라도 아니면 false
+- 체크박스 전체 선택 상태 판단
+- 모든 row가 checked === true인지 확인, 유효성 검사: 모든 입력 필드가 유효한지 검사
+
+```js
+const scores = [80, 90, 100];
+
+_.every(scres, (s) => s >= 60);
+// -> true(모두 60점 이상)
+
+_.every(scres, (s) => s >= 90);
+// -> false (80이 조건을 만족하지 못한다)
+```
+
+14.\_.some(collection, predicate)
+
+- 하나라도 조건을 만족하면 true, 전부 아니면 false.
+
+```js
+const scores = [40, 50, 100];
+
+_.some(scores, (s) => s >= 90);
+// -> true (100이 조건을 만족)
+
+_.some(scores, (s) => s >= 60);
+// -> false (60 이상이 없음)
+```
+
 -> 해당 함수들은 데이터 조작, 이벤트 핸들링, 성능 최적화에 유용하다. 더 많은 함수는 Lodash 공식 문서에서 확인하길 바란다.
 
 ---
