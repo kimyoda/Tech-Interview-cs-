@@ -300,6 +300,60 @@ console.log(validResponses);
 
 ### 2-1. uniq
 
+- 중복 제거, 배열에서 중복된 값을 제거하고 새로운 배열을 반환한다.
+
+```ts
+const uniqueArray = uniq(arr);
+```
+
+**사용법**
+`uniq(arr)`
+
+- 배열에서 중복된 값들을 제거하고 고유한 값들만 남기고 싶을 때 uniq를 사용한다. 원본 배열에서 처음 나타나는 순서를 유지한다.
+
+```ts
+import { uniq } from "es-toolkit/array";
+
+// 숫자 레벨에서 중복을 제거한다.
+const numbers = [1, 2, 2, 3, 4, 4, 5];
+const uniqeNumbers = uniq(numbers);
+console.log(uniqeNumbers); // [1, 2, 3, 4, 5]
+
+// 문자열 배열에서 중복을 제거한다.
+const words = ["apple", "banana", "apple", "cherry", "banana"];
+const uniqueWords = uniq(words);
+console.log(uniqueWords); // ['apple', 'banana', 'cherry']
+
+// 객체 배열에서 참조가 같은 객체를 제거한다.
+const obj1 = { id: 1 };
+const obj2 = { id: 2 };
+const obj3 = { id: 3 };
+const objects = [obj1, obj2, obj1, obj3, obj2];
+console.log(uniqueObjects); // [{id: 1}, {id: 2}, {id: 3}]
+
+// 실무 예시 1: 태그 중복 제거
+const tags = ["react", "typescript", "react", "nodejs", "typescript"];
+const uniqueTags = uniq(tags);
+console.log(uniqueTags); // ['react', 'typescript', 'nodejs']
+```
+
+- 빈 배열에서 빈 배열을 반환한다.
+
+```ts
+import { uniq } from "es-toolkit/array";
+
+const emptyArray = uniq([]);
+console.log(emptyArray); // []
+```
+
+**파라미터**
+
+- arr(readonly T[]): 중복을 제거할 배열이다.
+
+**반환값**
+
+- (T[]): 중복이 제거된 새로운 배열이다. 원본 배열에서 처음 나타나는 순서를 유지한다.
+
 ### 2-2. uniqBy
 
 ### 2-3. difference
