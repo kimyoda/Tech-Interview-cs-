@@ -433,6 +433,57 @@ const uniqueContacts = uniqBy(contacts, (c) => c.email);
 
 ### 2-3. difference
 
+- 첫번째 배열에서 두 번째 배열에 있는 요소들을 제외한 새 배열을 반환한다.
+
+```ts
+const result = difference(firstArr, secondArr);
+```
+
+**사용법**
+`difference(firstArr, secondArr)
+
+- 두 배열의 차집함을 구하고 싶을 때 `difference`를 사용한다. 첫 번째 배열만 있고 두 번째 배열에는 없는 요소들로 이루어진 새 배열이 반환된다.
+
+```ts
+import { difference } from "es-toolkit/array";
+
+// 숫자 배경의 차집합을 구한다.
+const array1 = [1, 2, 3, 4, 5];
+const array2 = [2, 4];
+difference(array1, array2);
+// Returns: [1, 3, 5]
+// 2와 4는 배열에 모두 있어 차례로 제외된다.
+
+// 문자열 배열의 차집합
+const colors1 = ["red", "blue", "green"];
+const colors2 = ["blue", "yellow"];
+difference(array1, array2);
+// Returns ['red', 'green']
+```
+
+- 빈 배열과의 차집합은 원래 배열과 같다.
+
+```ts
+import { difference } from "es-toolkit/array";
+
+difference([1, 2, 3], []); // [1, 2, 3]
+difference([], [1, 2, 3]); // []
+```
+
+**파라미터**
+
+- `firstArr`(T[]): 차집합을 구한 기준 배열이다.
+- `secondArr`(T[]): 첫 번째 배열에서 제외한 요소들을 포함한 배열이다.
+
+**반환값**
+(T[]): 첫 번째 배열에만 있고 두 번째 배열에는 없는 요소들로만 이루어진 새 배열이다.
+
+- 라이브러리 성능 및 사이즈
+  | 비교 항목 | es-toolkit (추천) | lodash-es | 차이 / 효율 |
+  | :--- | :--- | :--- | :--- |
+  | **번들 사이즈** | **90 바이트** | 7,958 바이트 | **92.4% 더 작음** (초경량) |
+  | **성능 (연산/초)** | **9,317,227 회** | 5,030,861 회 | **85% 더 빠름** (고성능) |
+
 ### 2-4. intersection
 
 ---
