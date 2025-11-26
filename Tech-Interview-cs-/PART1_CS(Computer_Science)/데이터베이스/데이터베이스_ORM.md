@@ -150,6 +150,46 @@ const user = await prisma.user.findUnique({
 
 **JPA(Java Persistence API) + hIBERNATE**
 
+- JPA는 Java 표준 ORM 기술, Hibernate가 JPA의 대표적인 구현체다.
+- Spring Framework에서 기본적으로 사용, Java 개발자가 익숙한 통일된 사용법을 제공한다.
+- Java 표준 기술, Spring Data JPA를 통한 편리한 사용
+- 영속성 컨텍스트를 통한 자동 변경을 감지한다
+- JPQL(Java Persistence Query Language)를 제공한다.
+
+**장점**
+
+- 안정적이고 다양한 레퍼런스
+- 객체 지향적 개발이 가능하다
+
+**단점**
+
+- 공부를 해야될 양이 많다(영속성 컨텍스트, N+1 문제 등)
+- 복잡한 쿼리의 작성이 어렵다.
+- 예쌍치 못한 쿼리가 발생할 가능성이 있다.
+
+```java
+@Entity
+@Table(name = "users")
+public class User {
+  @Id
+  @GeneratedValue(strategy = GenerationType.IDENTITY)
+  private Long id;
+
+  @Column(nullable = false)
+  private String name;
+
+  @Column(unique = true)
+  private String email;
+
+  @OneToMany(mappedBy = "author")
+  private List<Post> posts;
+}
+
+// 사용
+User user = userRepository.findById(1L).orElseThrow();
+user.setName("New Name"); // 트랜잭션 커밋 시 자동 UPDATE
+```
+
 ---
 
 **PHP(Laravel-EloquentORM)**
