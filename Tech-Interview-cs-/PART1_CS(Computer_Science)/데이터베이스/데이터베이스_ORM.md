@@ -194,4 +194,41 @@ user.setName("New Name"); // 트랜잭션 커밋 시 자동 UPDATE
 
 **PHP(Laravel-EloquentORM)**
 
+- Eloquent ORM은 Laravel에 내장된 유연한 ORM으로, Active Recoard 구현을 통해 데이터베이스 상호작용을 단순화한다.
+- 데이터베이스 테이블을 클래스, 레코드를 객체로 변환, 객체 지향 프로그래밍 방식으로 데이터를 조작할 수 있다.
+
+- Active Recoard 패턴
+- MySQL, PostgresSQL, SQLite, SQLServer를 지원한다.
+- 직관적이고 표현력 있는 문법이다.
+- 관계 정의에 용이하다.
+
+**장점**
+
+- Laravel쪽에서 가장 많이 사용한다.
+- 간결한 문법이다
+- 개발속도가 빠르다.
+
+**단점**
+
+- 대량데이터 처리 성능 시 성능이슈가 생길수도 있다.
+- Laravel에 종속적이다.
+
+```php
+// 모델 정의
+class User extends Model
+{
+    protected $fillable = ['name', 'email'];
+
+    public function posts()
+    {
+        return $this->hasMany(Post::class);
+    }
+}
+
+// 사용
+$user = User::with('posts')->find(1);
+$user->name = 'New Name';
+$user->save();
+```
+
 ---
