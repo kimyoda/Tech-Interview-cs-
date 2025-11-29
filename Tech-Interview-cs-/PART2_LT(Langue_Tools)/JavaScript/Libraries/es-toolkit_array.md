@@ -547,7 +547,114 @@ intersection(numbers, empty);
 
 ### 3-1. groupBy
 
+- 배열의 요소들을 특정 기준에 따라 분류하고 싶을 때 `groupBy`를 사용한다.
+- 각 요소에서 키를 생성하는 함수를 제공, 같은 키를 가진 요소들끼리 묶어서 객체로 반환한다.
+- 반환되는 객체의 값은 그룹에 속하는 요소들의 배열이다.
+- 데이터를 카테고리별로 정리하거나 그룹별 분석을 할 때 유용하다.
+
+```ts
+import { groupBy } from "es-toolkit/array";
+
+// 객체 배열을 카테고리로 그룹화한다.
+const items = [
+  { category: "fruit", name: "apple" },
+  { category: "fruit", name: "banana" },
+  { category: "vegetable", name: "carrot" },
+];
+
+const result = groupBy(items, (item) => item.category);
+// 결과:
+// {
+//   fruit: [
+//     { category: 'fruit', name: 'apple' },
+//     { category: 'fruit', name: 'banana' }
+//   ],
+//   vegetable: [
+//     { category: 'vegetable', name: 'carrot' }
+//   ]
+// }
+```
+
+- 다양한 기준으로 그룹화할 수 있다.
+
+```ts
+import { groupBy } from "es-toolkit/array";
+
+// 문자별 길이별로 그룹화한다.
+const words = ["one", "two", "three", "four", "five"];
+const byLength = groupBy(words, (word) => word.length);
+// 결과: { 3: ['one', 'two'], 4: ['four', 'five], 5:['three']}
+
+// 짝수/홀수별로 그룹화한다.
+const numbers = [1, 2, 3, 4, 5, 6];
+const byParity = groupBy(numbers, (num) => (num % 2 === 0 ? "even" : "odd"));
+// 결과: { odd: [1, 3, 5], even: [2, 4, 6]}
+```
+
+**파라미터**
+
+- `arr`(`T[]`): 그룹화할 배열이다.
+- `getKeyFromItem`(`(item: T) => K`): 각 요소에서 키를 생성하는 함수다.
+
+**반환값**
+
+- (`Record<K, T[]>`): 키에 따라 요소들이 그룹화된 객체를 반환한다.
+
 ### 3-2. partition
+
+`partition`
+
+- 조건에 따라 배열을 두 그룹으로 나눈 튜플을 반환한다.
+
+```ts
+const [truthy, falsy] = partition(arr, isInTruthy);
+```
+
+**사용법**
+
+- `partition(arr, isInTruthy)`
+- 배열의 요소들을 특정 조건에 따라 두 그룹으로 분리하고 싶을 때 사용한다.
+- 조건함수가 true를 반환하는 요소들과 false를 반환하는 요소들을 각각 다른 배열로 분리한다.
+
+```ts
+import { partition } from "es-toolkit/array";
+
+// 숫자 배열을 짝수와 홀수로 나눈다.
+const numbers = [1, 2, 3, 4, 5, 6];
+const [evens, odss] = partition(numbers, (x) => x % 2 === 0);
+// evens: [2, 4, 6]
+// odss: [1, 3, 5]
+
+// 객체 배열을 특정 조건으로 나눈다.
+const users = [
+  { name: "Alice", active: true },
+  { name: "Bob", active: false },
+  { name: "Charlie", active: true },
+];
+
+const [activeUsers, inactiveUsers] = partition(users, (user) => user.active);
+// activeUsers: [{ name: 'Alice', active: true }, { name: 'Charlie', active: true }]
+// inactiveUsers: [{ name: 'Bob', active: false }]
+```
+
+- 반 배열에서 두 개의 빈 배열을 반환한다.
+
+```ts
+import { partition } from "es-toolkit/array";
+
+const [truthy, falsy] = partition([], (x) => x > 0);
+// truthy: []
+// falsy: []
+```
+
+**파라미터**
+
+- `arr`(`T[]`): 두 그룹으로 나누는 배열이다.
+- `isInTruthy`(`(value: T) => boolean`): 각 요소가 첫 번째 배열(truthy)에 포함될지, 두 번째 배열(falsy)에 포함될 지 결정하는 조건 함수다.
+
+**반환값**
+
+- (`[truthy:T[], falsy: T[]]`): 두 배열로 구성된 튜플이다. 첫번째 배열은 조건이 `true`인 요소를, 두 번째 배열은 조건이 `false`인 요소들을 담고 있다.
 
 ---
 
