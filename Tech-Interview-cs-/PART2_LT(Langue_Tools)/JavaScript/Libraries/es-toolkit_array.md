@@ -662,7 +662,159 @@ const [truthy, falsy] = partition([], (x) => x > 0);
 
 ### 4-1. orderBy
 
+- 여러 기준과 정렬방향에 따라 객체 배열을 정렬한 새 배열을 반환한다.
+
+```ts
+const sorted = orderBy(arr, criteria, orders);
+```
+
+**사용법**
+
+- `orderBy(arr, criteria, orders)`
+- 객체 배열을 여러 조건으로 복합 정렬할 때 `orderBy`를 사용한다.
+- 조건마다 오름차순이나 내림차순을 지정할 수 있다.
+- 같은 값이면 다음조건으로 정렬한다.
+
+```ts
+import { orderBy } from "es-toolkit/array";
+
+// 여러 기준으로 사용자 배열을 정렬한다.
+const users = [
+  { user: "fred", age: 48 },
+  { user: "barney", age: 34 },
+  { user: "fred", age: 40 },
+  { user: "barney", age: 36 },
+];
+
+orderBy(users, [(obj) => obj.user, "age"], ["asc", "desc"]);
+// Returns:
+// [
+//   { user: 'barney', age: 36 },
+//   { user: 'barney', age: 34 },
+//   { user: 'fred', age: 48 },
+//   { user: 'fred', age: 40 }
+// ]
+
+// 속성 이름과 함수를 섞어서 사용할 수 있다.
+const products = [
+  { name: "Apple", category: "fruit", price: 1.5 },
+  { name: "Banana", category: "fruit", price: 0.8 },
+  { name: "Broccoli", category: "vegetable", price: 2.0 },
+];
+
+orderBy(
+  products,
+  ["category", (product) => product.name.length],
+  ["asc", "desc"]
+);
+// Returns: category로 먼저 정렬하고, 같은 category 내에서는 이름 길이 내림차순으로 정렬
+```
+
+- 정렬 방향의 개수가 조건보다 적으면 마지막 방향을 반복 사용한다.
+
+```ts
+import { orderBy } from "es-toolkit/array";
+
+const data = [
+  { a: 1, b: 1, c: 1 },
+  { a: 1, b: 2, c: 2 },
+  { a: 2, b: 1, c: 1 },
+];
+
+orderBy(data, ["a", "b", "c"], ["asc", "desc"]);
+// 'a'는 오름차순, 'b'와 'c'는 내림차순으로 정렬된다.
+```
+
+**파라미터**
+
+- `arr`(`T[]`): 정렬할 객체 배열이다.
+- `criteria`(`Array<((item: T) => unknown) | keyof T>`): 정렬할 기준들이다. 객체의 속성 이름이나 값을 반환하는 함수다.
+- `orders`(`Array<'asc' | 'desc'>`): 각 기준에 대한 정렬 방향 배열이다. `asc`는 오름차순, `desc`는 내림차순을 의미한다.
+
+**반환값**
+
+- (`T[]`): 지정된 기준과 방향에 따라 정렬된 새 배열이다.
+
 ### 4-2. sortBy
+
+- 주어진 기준에 따라 객체 배열을 오름차순으로 정렬한 새 배열을 반환한다.
+
+```ts
+const sorted = sortBy(arr, criteria);
+```
+
+**사용법**
+
+- `sortBy(arr, criteria)`
+- 객체 배열을 여러 속성이나 계산된 값을 기준으로 정렬하고 싶을 때 `sortBy`를 사용한다.
+- 속성 이름이나 변환 함수를 배열로 제공, 해당 순서대로 우선순위를 두고 오름차순으로 정렬한다.
+- 테이블 데이터를 정렬하거나 복잡한 정렬 로직이 필요할 때 유용하다.
+
+```ts
+import { sortBy } from "es-toolkit/array";
+
+// 단일 속성으로 정렬한다.
+const users = [
+  { name: "john", age: 30 },
+  { name: "jane", age: 25 },
+  { name: "bob", age: 35 },
+];
+
+const byAge = sortBy(users, ["age"]);
+// Returns: [{ name: 'jane', age: 25 }, { name: 'john', age: 30 }, { name: 'bob', age: 35 }]
+
+// 여러 속성으로 정렬한다.
+const employees = [
+  { name: "john", department: "engineering", age: 30 },
+  { name: "jane", department: "hr", age: 25 },
+  { name: "bob", department: "engineering", age: 35 },
+  { name: "alice", department: "engineering", age: 25 },
+];
+const sorted = sortBy(employyes, ["department", "age"]);
+// Returns: 부서 먼저, 그 다음 나이 순으로 정렬
+// [
+//   { name: 'alice', department: 'engineering', age: 25 },
+//   { name: 'john', department: 'engineering', age: 30 },
+//   { name: 'bob', department: 'engineering', age: 35 },
+//   { name: 'jane', department: 'hr', age: 25 }
+// ]
+```
+
+- 함수를 사용, 복잡한 정렬 기준을 만들 수 있다.
+
+```ts
+import { sortBy } from "es-toolkit/array";
+
+// 함수와 속성을 섞어서 사용한다.
+const proudcts = [
+  { name: "laptop", price: 1000, category: "electronics" },
+  { name: "shirt", price: 50, category: "clothing" },
+  { name: "phone", price: 800, category: "electronics" },
+];
+
+const sorted = sortBy(products, [
+  "category",
+  (item) => -item.price, // 가격은 내림차순
+]);
+// Returns: 카테고리 먼저, 그 다음 가격 높은 순으로 정렬한다.
+
+// 계산된 값으로 정렬한다.
+const words = ["hello", "a", "wonderful", "world"];
+const byLength = sortBy(
+  words.map((word) => ({ word, length: word.length })),
+  ["length"]
+);
+// Returns: 문자열 같이 순으로 정렬된 객체 배열이다.
+```
+
+**파라미터**
+
+- `arr`(`readonly T[]`): 정렬할 객체 배열이다.
+- `criteria`(`Array<((item:T)=> unknown) | keyof T>`): 정렬 기준이다. 객체 속성 이름이나 변환 함수의 배열로, 앞에 있는 기준이 우선순위가 높다.
+
+**반환값**
+
+- (`T[]`): 지정된 기준에 따라 오름차순으로 정렬된 새 배열을 반환한다.
 
 ---
 
