@@ -436,3 +436,194 @@ resources/views/components/app-layout.blade.php:
 ---
 
 5. 실전:CRUD 운영툴 구축
+
+### 5-1. Migration 작성
+
+```php
+// database/migrations/xxxx_create_example_table.php
+
+public function up()
+{
+    Schema::create('example_', function (Blueprint $table) {
+        $table->id();
+        $table->integer('card');           // 카드
+        $table->integer('count');             // 필요 경험치
+        $table->timestamps();
+    });
+}
+```
+
+### 5-2. Model 생성
+
+```php
+// app/Models/Example.php
+
+namespace App\Models;
+
+use Illuminate\Database\Eloquent\Model;
+
+class Example extends Model
+{
+    protected $fillable = [
+        'card',
+        'count',
+    ];
+}
+```
+
+### 5-3. Controller 구조
+
+```php
+// app/Http/Controllers/ExampleController.php
+
+class ExampleController extends Controller
+{
+    // 목록 페이지
+    public function index()
+    {
+        $exampleExp = exampleExp::paginate(10);
+        return view('example-exps.index', compact('exampleExp'));
+    }
+
+    // 생성 폼 페이지
+    public function create()
+    {
+        return view('example-exps.create');
+    }
+
+    // 저장 처리
+    public function store(Request $request)
+    {
+        $validated = $request->validate([
+            'card' => 'required|integer',
+            'count' => 'required|integer',
+        ]);
+
+        CardLevelExp::create($validated);
+        return redirect()->route('card-level-exps.index');
+    }
+
+    // 상세 페이지
+    public function show(CardLevelExp $cardLevelExp)
+    {
+        return view('example-exps.show', compact('exampleExp'));
+    }
+
+    // 수정 폼 페이지
+    public function edit(CardLevelExp $cardLevelExp)
+    {
+        return view('example-exps.edit', compact('exampleExp'));
+    }
+
+    // 수정 처리
+    public function update(Request $request, CardLevelExp $cardLevelExp)
+    {
+        $validated = $request->validate([
+            'card' => 'required|integer',
+            'count' => 'required|integer',
+        ]);
+
+        $cardLevelExp->update($validated);
+        return redirect()->route('example-exps.index');
+    }
+
+    // 삭제 처리
+    public function destroy(CardLevelExp $cardLevelExp)
+    {
+        $cardLevelExp->delete();
+        return redirect()->route('example-exps.index');
+    }
+}
+```
+
+### 5-4. View 페이지 역할
+
+- index.balde.php (목록 페이지)
+
+```php
+<!-- 테이블로 전체 목록 표시 -->
+<table>
+    <thead>
+        <tr>
+            <th>NO</th>
+            <th>CARD</th>
+            <th>COUNT</th>
+            <th>ACTIONS</th>
+        </tr>
+    </thead>
+    <tbody>
+        @foreach($cardLevelExps as $item)
+            <tr>
+                <td>{{ $item->id }}</td>
+                <td>{{ $item->card }}</td>
+                <td>{{ $item->count }}</td>
+                <td>
+                    <a href="{{ route('cexample-exps.show', $item) }}">Show</a>
+                    <a href="{{ route('example-exps.edit', $item) }}">Edit</a>
+                    <form action="{{ route('example-exps.destroy', $item) }}" method="POST">
+                        @csrf
+                        @method('DELETE')
+                        <button>Delete</button>
+                    </form>
+                </td>
+            </tr>
+        @endforeach
+    </tbody>
+</table>
+```
+
+- create.blade.php (생성 페이지)
+
+```php
+<form method="POST" action="{{ route('example-exps.store') }}">
+    @csrf
+    @include('example-exp.form')
+</form>
+
+<!-- form.blade.php 내용: -->
+<div>
+    <label>Card</label>
+    <input type="number" name="card" value="{{ old('card') }}">
+    @error('card')
+        <span>{{ $message }}</span>
+    @enderror
+</div>
+
+<div>
+    <label>Count</label>
+    <input type="number" name="count" value="{{ old('count') }}">
+</div>
+
+<button type="submit">Submit</button>
+```
+
+- show.blade.php
+
+```php
+<!-- 데이터를 보기 좋게 표시 -->
+<dl>
+    <dt>Card</dt>
+    <dd>{{ $exampleExp->card }}</dd>
+
+    <dt>Count</dt>
+    <dd>{{ $exampleExp->count }}</dd>
+
+</dl>
+```
+
+### 5-5. 라우트 설정
+
+```php
+// routes/web.php
+
+Route::resource('card-level-exps', ExampleExpController::class);
+
+// 이 한 줄로 다음 라우트가 자동 생성됨:
+// GET    /example-exps           → index()
+// GET    /example-exps/create    → create()
+// POST   /example-exps-exps           → store()
+// GET    /example-exps/{id}      → show()
+// GET    /example-exps/{id}/edit → edit()
+// PUT    /example-exps/{id}      → update()
+// DELETE /example-exps/{id}      → destroy()
+```
