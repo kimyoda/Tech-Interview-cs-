@@ -822,6 +822,56 @@ const byLength = sortBy(
 
 ### 5-1. take
 
+- 배열의 처음부터 지정한 개수만큼 요소를 가져와 새 배열을 만든다.
+
+```ts
+const taken = take(arr, count);
+```
+
+**사용법**
+
+- `take(arr, count?)`
+- 배열의 앞에서 몇 개의 요소만 필요할 때 `take`를 사용한다.
+- 요청한 개수가 배열 길이보다 크면 전체 배열을 반환한다.
+
+```ts
+import { take } from 'es-toolkit/array';
+
+// 처음 3개 요소를 가져온다.
+take([1. 2. 3. 4. 5], 3);
+
+// 처음 2개 요소를 가져온다.
+take(['a', 'b', 'c'], 2);
+// Returns: ['a', 'b']
+```
+
+- 배열보다 많은 개수를 요청하면 전체 배열을 반환한다.
+
+```ts
+import { take } from "es-toolkit/array";
+
+take([1, 2, 3], 5);
+// Returns: [1, 2, 3]
+```
+
+- `count`를 생략하면 첫 번째 요소만 가져온다.
+
+```ts
+import { take } from "es-toolkit/array";
+
+take([1, 2, 3]);
+// Returns: [1]
+```
+
+**파라미터**
+
+- `arr`(`T[]`): 요소를 가져올 배열이다.
+- `count`(`number`, 선택): 가져올 요소의 개수다. 기본값은 1이다.
+
+**반환값**
+
+- (`T[]`): 배열의 처음부터 `count`개 요소를 포함한 새 배열을 반환한다.
+
 ### 5-2. drop
 
 ### 5-3. sample
