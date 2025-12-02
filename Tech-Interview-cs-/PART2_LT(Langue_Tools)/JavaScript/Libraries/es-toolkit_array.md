@@ -978,6 +978,66 @@ const randomItem = sample(mixed);
 
 ### 5-4. sampleSize
 
+- 배열에서 지정된 크기만큼 무작위로 선택된 요소들로 이루어진 새 배열을 반환한다.
+
+```ts
+const sampled = sampledSize(array, size);
+```
+
+**사용법**
+
+- `sampleSize(array, size)`
+- 배열에서 여러개의 요소를 무작위로 샘플링하고 싶을 떄 사용한다.
+- Floyd의 알고리즘 사용해 효율적으로 중복없는 랜덤 샘플을 사용한다.
+- 설문조사에서 표본을 추출, 게임에서 여러 아이템을 랜덤하게 선택할 때 유용하다.
+
+```ts
+import { sampleSize } from "es-toolkit/array";
+
+// 숫자 배열에 3개를 무작위로 선택한다.
+const numbers = [1, 2, 3, 4, 5, 6, 7, 8, 9, 10];
+const randomNumbers = sampleSize(numbers, 3);
+// Returns: [2, 7, 9] (실제로는 무작위)
+
+// 문자열 배열에서 2개를 무작위로 선택한다.
+const fruits = ["apple", "banana", "cherry", "date", "elderberry"];
+const randomFruits = sampleSize(frutis, 2);
+// Returns: ['cherry' , 'apple'] (예시)
+```
+
+- 다양한 크기로 샘플링 할 수 있다.
+
+```ts
+import { sampleSize } from "es-toolkit/array";
+
+const items = ["a", "b", "c", "d", "e"];
+
+// 1개 선택
+const single = sampleSize(items, 1);
+// Returns: ['c'] (예시)
+
+// 전체 배열 크기와 같게 선택 (섞은 효과)
+const all = sampleSize(items, 5);
+// Returns: ['b', 'd', 'a', 'e', 'c'] (예시)
+
+// 빈 배열 선택
+const none = sampleSize(items, 0);
+// Returns: []
+```
+
+**파라미터**
+
+- `array`(`readonly T[]`): 샘플링할 배열이다.
+- `size`(`number`): 선택할 요소의 개수다.
+
+**반환값**
+
+- (`T[]`): 무작위로 선택된 요소들로 구성된 새배열을 반환한다.
+
+**에러**
+
+- `size`가 배열의 길이보다 크면 에러를 던진다.
+
 ---
 
 ## 6. 배열 집합
