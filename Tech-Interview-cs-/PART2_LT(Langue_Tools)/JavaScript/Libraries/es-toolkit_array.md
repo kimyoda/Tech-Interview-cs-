@@ -874,7 +874,107 @@ take([1, 2, 3]);
 
 ### 5-2. drop
 
+- 배열의 시작부터 지정된 개수만큼 요소를 제거한 새 배열을 반환한다.
+
+```ts
+const dropped = drop(arr, itemsCount);
+```
+
+**사용법**
+`drop(arr, itemsCount)
+
+- 배열의 앞부분에서 요소를 제거하고 싶을 때 `drop`을 사용한다.
+- 지정한 개수만큼 처음 요소들을 제거, 나머지 요소들로 이루어진 새 배열을 반환한다.
+
+```ts
+import { drop } from "es-toolkit/array";
+
+// 배열의 처음 2개 요소를 제거한다.
+drop([1, 2, 3, 4, 5], 2);
+// Returns: [3, 4, 5]
+
+// 제거할 개수가 배열 길이보다 크면 빈 배열을 반환한다.
+drop([1, 2, 3], 5);
+// Returns: []
+```
+
+- 음수나 0을 전달하면 원본 배열과 같은 요소를 가진 새 배열을 반환한다.
+
+```ts
+import { drop } from "es-toolkit/array";
+drop([1, 2, 3], 0); // [1, 2, 3]
+drop([1, 2, 3], -2); // [1, 2, 3]
+```
+
+**파라미터**
+
+- `arr`(`T[]`): 요소를 제거할 배열이다.
+- `itemsCount`(`number`): 배열의 시작부터 제거할 요소의 개수다.
+
+**반환값**
+
+- (`T[]`): 시작부터 지정된 개수만큼 요소가 제거된 새 배열이다.
+
 ### 5-3. sample
+
+- 배열에서 무작위로 선택된 하나의 요스를 반환한다.
+
+```ts
+const randomElement = sameple(arr);
+```
+
+**사용법**
+
+- `sample(arr)`
+- 배열에서 무작위로 하나의 요소를 가져오고 싶을 때 `sample`을 사용한다.
+- 게임에서 랜덤 아이템을 선택, 테스트용 데이터를 랜덤하게 가져오거나 추첨할 때 사용한다.
+
+```ts
+import { sample } from "es-toolkit/array";
+
+// 숫자 배열에서 무작위로 하나를 선택한다.
+const numbers = [1, 2, 3, 4, 5];
+const randomNumber = sample(numbers);
+// Returns: 1, 2, 3, 4, 5 중 하나
+
+// 문자열 배열에서 무작위로 하나를 선택한다.
+const fruits = ["apple", "banana", "cherry", "date"];
+const randomeFruit = sample(fruits);
+// Returns: 'apple', 'banana', 'cherry', 'date' 줄 하나
+
+// 객체 배열에서 무작위로 하나를 선택한다.
+const users = [
+  { name: "Alice", age: 25 },
+  { name: "Bob", age: 30 },
+  { name: "Charlie", age: 35 },
+];
+const randomUser = sample(users);
+// Returns: 세 명의 시청자 중 무작위로 하나
+```
+
+- 다양한 타입의 배열에서도 사용한다.
+
+```ts
+import { sample } from "es-toolkit/array";
+
+// 불린 배열
+const booleans = [true, false];
+const randomBoolean = sample(booleans);
+// Returns: true or false
+
+// 혼합 타입 배열
+const mixed = [1, "hello", { key: "value" }, [1, 2, 3]];
+const randomItem = sample(mixed);
+// Returns: 배열에 있는 요소 중 아무거나
+```
+
+**파라미터**
+
+- `arr`(`readonly T[]`): 무작위로 요소를 선택한 배열이다.
+
+**반환값**
+
+- (`T`): 배열에서 무작위로 선택된 요소이다.
 
 ### 5-4. sampleSize
 
