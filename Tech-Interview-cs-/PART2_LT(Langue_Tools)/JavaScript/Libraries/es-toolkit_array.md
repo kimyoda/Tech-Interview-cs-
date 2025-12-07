@@ -1044,6 +1044,55 @@ const none = sampleSize(items, 0);
 
 ### 6-1. union
 
+- 두 배열의 모든 고유한 요소를 포함하는 새 배열을 만든다.
+
+```ts
+const unified = union(arr1, arr2);
+```
+
+**사용법**
+
+- `union(arr1, arr2)`
+- 여러 배열에서 중복없이 모든 요소를 하나로 합치고 싶을 때 사용한다.
+- 두 배열을 합친 후 중복된 값을 제거한 새 배열을 반환한다.
+
+```ts
+import { union } from "es-toolkit/array";
+
+// 숫자 배열의 합집합을 구한다.
+const array1 = [1, 2, 3];
+const array2 = [3, 4, 5];
+union(array1, array2);
+// Returns: [1, 2, 3, 4, 5]
+
+// 문자열 배열의 합집합ㄷ을 구한다.
+const fruits1 = ["apple", "banana"];
+const fruits2 = ["banana", "orange"];
+union(fruits1, fruits2);
+// Returns: ['apple', 'banana', 'orange']
+```
+
+- 첫번째 배열의 요소가 먼저 나오고, 그 다음에 두 번째 배열의 고유한 요소가 추가된다.
+
+```ts
+import { union } from "es-toolkit/array";
+
+const arr1 = [1, 2, 3];
+const arr2 = [2, 3, 4, 5];
+union(arr1, arr2);
+// Returns: [1, 2, 3, 4, 5]
+// 1, 2, 3은 arr1에서, 4, 5는 arr2에서 온 요소다.
+```
+
+**파라미터**
+
+- `arr1`(`T[]`): 합친 첫번째 배열이다.
+- `arr2`(`T[]`): 합친 두번째 배열이다.
+
+**반환값**
+
+- (`T[]`): 두 배열의 모든 고유한 요소를 포함한 새 배열을 반환한다.
+
 ### 6-2. zip
 
 ### 6-3. shuffle
