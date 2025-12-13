@@ -1189,6 +1189,61 @@ const shuffledMixed = shuffle(mixed);
 
 ### 6-4. fill
 
+- 배열의 요소를 지정된 값으로 채운다. 원본 배열을 직접 수정한다.
+
+```ts
+const filled = fill(arr, value, start, end);
+```
+
+> 원본 배열을 수정하지 않으려면 `toFilled`를 사용한다.
+> `toFilled`는 원본 배열을 수정하는 대신 새 배열을 반환한다.
+
+**사용법**
+
+- `fill(arr, value, start?, end?)`
+- 배열의 특정 범위를 지정된 값으로 채우고 싶을 때 사용한다.
+- 시작 위치부터 끝 위치 직전까지의 요소를 제공된 값으로 대체한다.
+- 시작이나 끝 위치를 지정하지 않으면 배열 전체를 채운다.
+
+```ts
+import { fill } from "es-toolkit/array";
+
+// 배열 전체를 'a'로 채운다.
+const array1 = [1, 2, 3];
+fill(array1, "a");
+// Returns: ['a', 'a', 'a']
+
+// 빈 배열을 2로 채운다.
+const array2 = Array(3);
+fill(array2, 2);
+// Returns: [2, 2, 2]
+
+// 인덱스 1부터 3 직전까지 '*'로 채운다.
+const array3 = [4, 6, 8, 10];
+fill(array3, "*", 1, 3);
+// Returns: [4, '*', '*', 10]
+```
+
+- 음수 인덱스를 사용할수도 있다. 음수 인덱스는 배열의 끝에서부터 계산한다.
+
+```ts
+import { fill } from "es-toolkit/array";
+
+const array = [1, 2, 3];
+fill(array, "*", -2, -1);
+// Returns: [1, '*', 3]
+```
+
+**파라미터**
+
+- `arr`(`Array<T | U>`): 채울 배열이다.
+- `value`(`U`): 배열을 채울 값이다.
+- `start`(`number`, 선택): 시작 위치다. 기본값은 `0`이다.
+- `end`(`number`, 선택): 끝 위치다. 기본값은 배열의 길이다.
+
+**반환값**
+(`Array<T | U>`): 값으로 채워진 원본 배열을 반환한다.
+
 ### 6-5. countBy
 
 ### 6-6. maxBy/minBy
