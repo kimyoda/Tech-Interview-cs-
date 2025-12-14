@@ -1138,7 +1138,111 @@ zip([1, 2], ["a", "b", "c", "d"]);
 
 ### 6-3. shuffle
 
+`shuffle(arr)`
+
+- 배열의 요소들을 무작위로 섞고 싶을 때 사용한다.
+- Fisher-Yates 알고리즘을 사용해 모든 순열이 동일한 확률로 나타나도록 무작위 섞기를 보장한다.
+- 카드 게임에서 덱 섞기, 퀴즈 문제 순서 랜덤화, 플레이리스트 셔플할 때 유용하다.
+
+```ts
+import { shuffle } from "es-toolkit/array";
+
+// 숫자 배열을 섞는다.
+const numbers = [1, 2, 3, 4, 5];
+const shuffledNumbers = shuffle(numbers);
+// Returns: [3, 1, 4, 5, 2] (예시, 실제로 무작위)
+console.log(numbers); // [1, 2, 3, 4, 5] (원본은 변경되지 않는다)
+
+// 문자열 배열을 섞는다.
+const fruits = ["apple", "banana", "cherry", "date"];
+const shuffledFruits = shuffle(frutis);
+// Returns: ['cherry', 'apple', 'date', 'banana']
+```
+
+- 다양한 타입의 배열을 섞을 수 있다.
+
+```ts
+import { shuffle } from "es-toolkit/array";
+
+// 객체 배열을 섞는다.
+const users = [
+  { name: "Alice", age: 25 },
+  { name: "Bob", age: 30 },
+  { name: "Charlie", age: 35 },
+];
+const shuffledUsers = shuffle(users);
+// Returns: 사용자 객체들이 무작위 순서로 섞인 새배열
+
+// 혼합 타입 배열을 섞는다.
+const mixed = [1, "hello", true, { key: "value" }];
+const shuffledMixed = shuffle(mixed);
+// Returns: 요소들이 무작위 순서로 섞인 새 배열
+```
+
+**파라미터**
+
+- `arr`(`readonly T[]`): 섞을 배열이다.
+
+**반환값**
+
+- (`T[]`): 요소들이 무작위 순서로 섞인 새 배열을 반환한다. 원본 배열은 변경되지 않는다.
+
 ### 6-4. fill
+
+- 배열의 요소를 지정된 값으로 채운다. 원본 배열을 직접 수정한다.
+
+```ts
+const filled = fill(arr, value, start, end);
+```
+
+> 원본 배열을 수정하지 않으려면 `toFilled`를 사용한다.
+> `toFilled`는 원본 배열을 수정하는 대신 새 배열을 반환한다.
+
+**사용법**
+
+- `fill(arr, value, start?, end?)`
+- 배열의 특정 범위를 지정된 값으로 채우고 싶을 때 사용한다.
+- 시작 위치부터 끝 위치 직전까지의 요소를 제공된 값으로 대체한다.
+- 시작이나 끝 위치를 지정하지 않으면 배열 전체를 채운다.
+
+```ts
+import { fill } from "es-toolkit/array";
+
+// 배열 전체를 'a'로 채운다.
+const array1 = [1, 2, 3];
+fill(array1, "a");
+// Returns: ['a', 'a', 'a']
+
+// 빈 배열을 2로 채운다.
+const array2 = Array(3);
+fill(array2, 2);
+// Returns: [2, 2, 2]
+
+// 인덱스 1부터 3 직전까지 '*'로 채운다.
+const array3 = [4, 6, 8, 10];
+fill(array3, "*", 1, 3);
+// Returns: [4, '*', '*', 10]
+```
+
+- 음수 인덱스를 사용할수도 있다. 음수 인덱스는 배열의 끝에서부터 계산한다.
+
+```ts
+import { fill } from "es-toolkit/array";
+
+const array = [1, 2, 3];
+fill(array, "*", -2, -1);
+// Returns: [1, '*', 3]
+```
+
+**파라미터**
+
+- `arr`(`Array<T | U>`): 채울 배열이다.
+- `value`(`U`): 배열을 채울 값이다.
+- `start`(`number`, 선택): 시작 위치다. 기본값은 `0`이다.
+- `end`(`number`, 선택): 끝 위치다. 기본값은 배열의 길이다.
+
+**반환값**
+(`Array<T | U>`): 값으로 채워진 원본 배열을 반환한다.
 
 ### 6-5. countBy
 
