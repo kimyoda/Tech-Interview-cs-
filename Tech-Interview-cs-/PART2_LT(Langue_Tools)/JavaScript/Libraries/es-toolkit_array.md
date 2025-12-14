@@ -1246,6 +1246,50 @@ fill(array, "*", -2, -1);
 
 ### 6-5. countBy
 
+- 배열의 요소들을 변환 함수의 결과값으로 분류, 개수를 센 객체를 반환한다.
+
+```ts
+const counted = countBy(arr, mapper);
+```
+
+**사용법**
+
+- `countBy(arr, mapper)`
+- 배열의 요소들을 특정 기준으로 분류, 각 그룹의 개수를 세고 싶을 때 사용한다.
+- 변환 함수가 반환하는 값을 키로 사용해 요소들을 그룹화, 각 그룹에 속한 요소의 개수를 계산한다.
+
+```ts
+import { countBy } from "es-toolkit/array";
+
+// 숫자를 홀수/짝수로 분류해 개수를 센다.
+countBy([1, 2, 3, 4, 5], (item) => (item % 2 === 0 ? "even" : "odd"));
+```
+
+객체 배열의 특정 속성을 기준으로 개수를 셀 수도 있다.
+
+```ts
+import { countBy } from "es-toolkit/array";
+
+const users = [
+  { name: "Alice", age: 25 },
+  { name: "Bob", age: 30 },
+  { name: "Charlie", age: 25 },
+  { name: "David", age: 30 },
+];
+
+countBy(users, (user) => user.age);
+// Returns: { '25': 2, '30': 2 }
+```
+
+**파라미터**
+
+- `arr`(`T[]`): 요소의 개수를 세고자 하는 배열이다.
+- `mapper`(`(item: T) => k`): 요소를 분류할 기준이 되는 값을 반환하는 함수다.
+
+**반환값**
+
+- (`Record<K, number>`): 각 분류 기준별로 요소가 몇 개 있는지를 나타내는 객체다.
+
 ### 6-6. maxBy/minBy
 
 ---
