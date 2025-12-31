@@ -241,3 +241,51 @@ const allPass = every1(scores, (score) => score > 70); // true
 ## 5. at, includes 메서드: 인덱스 접근과 포함
 
 ### 5-1. JavaScript 기본동작
+
+- `at`은 인덱스(음수 지원)로 요소를 가져오고, `includes`는 값 존재 여부를 확인한다. `at`은 ES2022부터 도입되어 호환성을 확인한다.
+
+```js
+const arrAtInc = ["red", "blue", "green"];
+const lastJS = arrAtInc.at(-1); // "green"
+const hasRedJS = arrAtInc.includes("red"); // true
+```
+
+### 5-2. TypeScript 구현
+
+- `at`은 `undefined` 가능성을 고려한다.
+- at:
+
+```ts
+function at1<T>(arr: T[], index: number): T | undefined {
+  return arr.at(index);
+}
+```
+
+- includes:
+
+```ts
+function includes1<T>(arr: T[], value: T): boolean {
+  return arr.includes(value);
+}
+```
+
+### 5-3. 화살표 함수
+
+```ts
+const at1_3 = <T>(arr: T[], index: number): T | undefined => arr.at(index);
+
+const includes1_3 = <T>(arr: T[], value: T): boolean => arr.includes(value);
+```
+
+### 5-4. 실제 적용 예시
+
+```ts
+const colors = ["red", "blue", "green"];
+const lastColor = at1(colors, -1); // "green"
+const hasRed = includes1(colors, "red"); // true
+```
+
+- value 타입을 배열 요소와 일치 시켜 타입 오류를 찾는다.
+- `includes`는 NaN도 처리하나, 참조 비교다.
+
+## 6. push, pop메서드: 요소 추가/ 제거
