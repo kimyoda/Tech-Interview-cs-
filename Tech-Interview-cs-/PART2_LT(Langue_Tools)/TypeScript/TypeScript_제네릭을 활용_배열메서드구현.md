@@ -137,3 +137,107 @@ const joined = reduce2<string, string, (acc: string, cur: string) => string>(
 ---
 
 ## 3. find 메서드: 첫 번째 일치 요소 찾기
+
+### 3-1. JavaScript 기본 동작
+
+`find`는 콜백 조건을 만족하는 첫 번째 요소를 반환한다. 없으면 `undefined`를 반환한다. `filter`와 달리 첫번째만 찾는다.
+
+```js
+const arrFind = [10, 20, 30];
+const foundJS = arrFind.find((value) => value > 15); // 20
+```
+
+### 3-2. TypeScript 구현
+
+- 변환 타입을 `T | undefined`로 지정해서 처리한다.
+
+```ts
+function find1<T>(arr: T[], func: (arg: T) => boolean): T | undefined {
+  return arr.find(func);
+}
+```
+
+- 콜백 타입 제한
+
+```ts
+function find2<T, Func extends (arg: T) => boolean>(
+  arr: T[],
+  func: Func
+): T | undefined {
+  return arr.find(func);
+}
+```
+
+- 화살표 함수
+
+```ts
+const find1_3 = <T>(arr: T[], func: (arg: T) => boolean): T | undefined =>
+  arr.find(func);
+
+const find2_3 = <T, Func extends (arg: T) => boolean>(
+  arr: T[],
+  func: Func
+): T | undefined => arr.find(func);
+```
+
+예시
+
+```ts
+const users = [{ name: "Kim" }, { name: "Lee" }];
+const userFinded = find1(users, (user) => user.name === "Kim"); // { name: "Kim"}
+```
+
+## 4. some, every 메서드: 조건 만족 여부 확인
+
+### 4-1. JavaScript 동작 구현
+
+`some`은 하나라도 조건을 만족하면 true, `every`는 모두 만족해야 true를 반환한다.
+
+```js
+const arrCond = [80, 90, 100];
+const hasPerfectJS = arrCond.some((score) => score === 100); // true
+const isPassJs = arrCond.every((score) => score >= 70); // true
+```
+
+### 4-2. TypeScript 구현
+
+- boolean
+- some
+
+```ts
+function some1<T>(arr: T[], func: (arg: T) => boolean): boolean {
+  return arr.some(func);
+}
+```
+
+- every
+
+```ts
+function every1<T>(arr: T[], func: (arg: T) => boolean): boolean {
+  return arr.every(func);
+}
+```
+
+### 4-3 화살표 함수 버전
+
+```ts
+const some1_3 = <T>(arr: T[], func: (arg: T) => boolean): boolean =>
+  arr.some(func);
+
+const every1_3 = <T>(arr: T[], func: (arg: T) => boolean): boolean =>
+  arr.every(func);
+```
+
+### 4-4. 실제예시
+
+```ts
+const scores = [80, 90, 100];
+const hasPerfect = some1(scores, (score) => score === 100); // true
+const allPass = every1(scores, (score) => score > 70); // true
+```
+
+- 빈 배열에서 `some`은 false, `every`는 true를 반환한다.
+
+## 5. at, includes 메서드: 인덱스 접근과 포함
+
+### 5-1. JavaScript 기본동작
