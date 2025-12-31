@@ -289,3 +289,97 @@ const hasRed = includes1(colors, "red"); // true
 - `includes`는 NaN도 처리하나, 참조 비교다.
 
 ## 6. push, pop메서드: 요소 추가/ 제거
+
+### 6-1. JavaScript 동작
+
+`push`는 끝에 요소를 추가하고 새 길이를 반환, `pop`은 끝 요소를 제거하고 반환한다. 원본 배열을 mutate한다.
+
+```js
+const stackJS = [1, 2];
+stackJS.push(3); // [1, 2, 3]
+const poppedJS = stackJS.pop(); // 3, stackJS는 [1, 2]
+```
+
+### 6-2. TypeScript 구현
+
+원본 변경을 반영한다.
+
+- push:
+
+```ts
+function push1<T>(arr: T[], item: T): number {
+  return arr.push(item);
+}
+```
+
+- pop:
+
+```ts
+function pop1<T>(arr: T[]): T | undefined {
+  return arr.pop();
+}
+```
+
+### 6-3. 화살표 함수
+
+```ts
+const push1_3 = <T>(arr: T[], item: T): number => arr.push(item);
+
+const pop1_3 = <T>(arr: T[]): T | undefined => arr.pop();
+```
+
+### 6-4. 실제 적용 예시
+
+```ts
+const stack = [1, 2];
+push1(stack, 3); // [1, 2, 3]
+const popped = pop1(stack); // [1, 2]
+```
+
+- item 타입을 배열과 맞춰 잘못된 타입 추가를 막는다.
+- 불변성은 spread를 주로 사용. 빈 배열 pop은 undefined.
+
+## 7. reverse와 slice 메서드: 반전, 슬라이싱
+
+### 7-1. JavaScript 기본동작
+
+`reverse` 는 배열을 뒤집으나 원본을 변경한다. `slice`는 지정 구간을 복사해 새 배열을 반환한다.
+
+```js
+const arrRevSlice = ["a", "b", "c", "d"];
+const reversedJS = [...arrRevSlice].reverse(); // ["d", "c", "b", "a"]
+const slicedJS = arrRevSlice.slice(1, 3); // ["b", "c"]
+```
+
+### 7-2. TypeScript
+
+`reverse` 에서 불변성을 위해 spread 사용
+
+- reverse:
+
+```ts
+function reverse1<T>(arr: T[]): T[] {
+  return [...arr].reverse();
+}
+```
+
+- slice:
+
+```ts
+function slice1<T>(arr: T[], start: number, end: number): T[] {
+  return arr.slice(start, end);
+}
+```
+
+### 7-3. 화살표 함수
+
+```ts
+const reverse1_3 = <T>(arr: T[]): T[] => [...arr].reverse();
+
+const slice1_3 = <T>(arr: T[], start: number, end: number): T[] =>
+  arr.slice(start, end);
+```
+
+### 실제 적용
+
+- 복사된 배열의 타입을 유지, 페이징 쪽
