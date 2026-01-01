@@ -31,8 +31,8 @@ interface User {
 
 type UserKeys = keyof uSER; // "id" |  "name" | "email"
 
-function getProperty(obj: User, key: UserKeys) {
-  return obj[key];
+function getPropertyUnsafe(obj: User, key: string) {
+  return obj[key]; // 타입 안전: key는 User의 키만 가능
 }
 
 const user: User = { id: 1, name: "Kim", email: "kim@example.com" };
@@ -44,3 +44,44 @@ const name = getProperty(user, "name"); // string 타입
 - 동작 원리: `keyof T`는 타입 T의 public 프로퍼티 키만 추출한다. 클래스의 private/protected 프로퍼티는 포함되지 않는다.
 - 숫자/문자 인덱스: 인덱스 시그니처가 있을 경우, `keyof`는 `number` 또는 `string`을 반환한다.
 - 유니온 타입과의 조합: `keyof (A & B)`는 교집합 키만 추출한다. `keyof T` 를 `Indexed Access`와 함께 사용하면 `T[keyof T]` 처럼 모든 값 타입의 유니온을 만들 수 있다.
+
+## 2. Mapped Type: 객체 속성을 순회하며 변형
+
+### 2-1. 개념
+
+- Mapped Type은 기존 객체 타입의 프로퍼티를 순회, 새로운 객체 타입을 생성한다.
+- `key in keyof T` 구문을 사용해 각 키에 대해 타입을 수정(optional, readonly 등)하거나 변환한다.
+- TypeScript의 유틸리티 타입(Partial, Readonly 등)의 기반이 된다.
+
+### 2-2. 예시
+
+```ts
+inferface Product {
+  id: number;
+  name: string;
+  price: number;
+}
+
+// Mapped Type으로 optional 생성
+type OptionalProduct = {
+  [Key in keyof Product]?: Product[Key];
+};
+
+// id, price 생략가능
+const partialProduct: OptionalProduct = {name: "Laptop"};
+
+// 읽기 전용
+type ReadonlyProduct = {
+  readonly [Key in keyof Product]: Product[Key];
+};
+
+const fixedProduct: ReadonlyProdcut = { id: 1, name: "Phone", price: 500};
+// 오류 readonly
+```
+
+### 2-3. 기본내용
+
+- `[Key in Keys]` Keys는 유니온 타입(T)이며, 각 Key에 대해 오른쪽 표현식으로 타입을 정의한다.
+- as절로 키리매핑도 가능하다.
+- 제네릭과 함꼐 사용하면 재사용성이 높다.
+- 객체 타입만 대상으로 사용하는 걸 권한다.
