@@ -14,6 +14,13 @@
 #### 기본동작
 
 - `Partial<Type>`은 주어진 타입의 모든 속성을 선택적(optional)로 만든다. 상태 업데이트나 부분 데이터 전달 시 필수 필드를 강제하지 않을 때 사용한다.
+- 맵드 타입을 활용해 각 키를 순회하여 `?`를 붙여 optional로 변환한다.
+
+```ts
+type Partial<T> = {
+  [key in keyof T]?: T[key]; // keyof T로 키를 순회, ?로 optional처리
+};
+```
 
 - 예시
 
@@ -39,11 +46,23 @@ updateTodo(1, { description: "새 설명" });
 
 - Partial이 모든 속성을 optional로 만든다고 나온다.
 
+```ts
+const draft: Pratial<Post> = { title: "제목", content: "초안!" };
+```
+
 ### 1-2. Required<T> - 모든 속성을 필수로 만들기
 
 #### 기본동작
 
 - `Required<Type>` 모든 속성을 필수(required)로 변환한다.
+- 데이터가 완전해야하는 함수 사용 권장
+
+```ts
+type Required<T> = {
+  [key in keyof T]-?: T[key]; // -?로 optional을 필수로 강제
+};
+```
+
 - 데이터가 완전해야 하는 함수에서 사용을 권장한다.
 - 예시
 
@@ -65,6 +84,17 @@ function UserCard(props: Required<User>) {
 // 에러 name과 eamil이 필수
 const user: User = { id: '1'};
 // 컴파일오류
+```
+
+- 다른예시
+
+```ts
+const withThumbnailPost: Required<Post> = {
+  title: "...",
+  tags: ["ts"],
+  content: "",
+  thumbnailURL: "https://...",
+};
 ```
 
 ### 1-3. Readonly<T> - 변경 불가능한 타입
@@ -152,3 +182,14 @@ const form: CreateTodoInput = { title: "", description: "" };
 
 - 조건부 타입은 타입 조건에 따라 분기, 유니언이나 함수 타입을 다룰때 좋다.
 - NonNullable, Parameters, Awaited 등을 추가로 얘기한다.
+
+### 2-1. Exclude<T, U> - 제외하고 싶은 필터링
+
+#### 기본동작
+
+- `Exclude<UnionType, ExcludedMembers>` 유니온에서 특정 타입을 제거한다.
+- 예시
+
+```ts
+type NonString = Exclude<string | number | boolean, string>;
+```
