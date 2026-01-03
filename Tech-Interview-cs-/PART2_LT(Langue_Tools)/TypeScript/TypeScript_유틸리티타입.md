@@ -102,6 +102,13 @@ const withThumbnailPost: Required<Post> = {
 #### 기본동작
 
 - `Readonly<Type>` 은 타입의 모든 속성을 **읽기 전용(readonly)**로 만들어 수정할 수 없게 한다.
+
+```ts
+type Readonly<T> = {
+  readonly [key in keyof T]: T[key];
+};
+```
+
 - 예시
 
 ```ts
@@ -118,6 +125,14 @@ const config: Readonly<Config> = {
 // config.timeout = 5000; 오류
 ```
 
+```ts
+const readonlyPost: Readonly<Post> = {
+  title: "보호된 게시글입니다.",
+  tags: [],
+  content: "",
+}; // readonlyPost.content = "";  // 수정 불가
+```
+
 - typescriptlang.org/docs/handbook/utility-types.html#readonlytype.
 
 ### 1-4. Record<K, V> - 키/값 매핑 타입 만들기
@@ -125,6 +140,13 @@ const config: Readonly<Config> = {
 #### 기본동작
 
 - `Record<Keys, Type>`은 키 집합과 값 타입으로 객체를 만든다.
+
+```ts
+type Record<K extends keyof any, V> = {
+  [key in K]: V;
+};
+```
+
 - 예시
 
 ```ts
@@ -135,14 +157,28 @@ const roleDescriptions: Record<'ADMIN' | 'USER' | 'GUEST', string> = {
 };
 ```
 
+```ts
+type Thumbnail = Record<
+  "large" | "medium" | "small" | "watch",
+  { url: string }
+>;
+```
+
 - 상수 맵이나 다국어 지원에서 키-값 쌍을 타입 안전하게 관리한다.
 - 참고: typescriptlang.org/docs/handbook/utility-types.html#recordkeys-type.
 
-### 1-4. Pick<T, K> - 필요한 필드만 선택
+### 1-5. Pick<T, K> - 필요한 필드만 선택
 
 #### 기본동작
 
 - `Pick<Type, Keys>` 는 지정한 속성만 추출한다.
+
+```ts
+type Pick<T, K extends keyof T> = {
+  [key in K]: T[key];
+};
+```
+
 - 예시
 
 ```ts
@@ -161,13 +197,25 @@ function TodoListItemRow(props: TodoListItem) {
 }
 ```
 
+```ts
+const legacyPost: Pick<Post, "title" | "content"> = {
+  title: "옛날 글",
+  content: "옛날 컨텐츠",
+};
+```
+
 - 참고문서: typescriptlang.org/docs/handbook/utility-types.html#picktype-keys.
 
-### 1-5. Omit<T, K> - 특정 필드 제거하기
+### 1-6. Omit<T, K> - 특정 필드 제거하기
 
 #### 기본동작
 
 - `Omit<Type, Keys>`는 지정한 속성을 제외한다.
+
+```ts
+type Omit<T, K extends keyof T> = Pick<T, Exclude<keyof T, K>>;
+```
+
 - 예시
 
 ```ts
@@ -176,20 +224,79 @@ type CreateTodoInput = Omit<Todo, "id" | "createdAt">;
 const form: CreateTodoInput = { title: "", description: "" };
 ```
 
+```ts
+const noTitlePost: Omit<Post, "title"> = {
+  content: "",
+  tags: [],
+  thumbnailURL: "",
+};
+```
+
 ---
 
 ## 2. 조건부 타입 기반 유틸리티 타입
 
 - 조건부 타입은 타입 조건에 따라 분기, 유니언이나 함수 타입을 다룰때 좋다.
 - NonNullable, Parameters, Awaited 등을 추가로 얘기한다.
+- `T extends U ? X : Y` 형태로 조건을 검사한다.
 
 ### 2-1. Exclude<T, U> - 제외하고 싶은 필터링
 
 #### 기본동작
 
 - `Exclude<UnionType, ExcludedMembers>` 유니온에서 특정 타입을 제거한다.
+
+```ts
+type Exclude<T, U> = T extends U ? never : T;
+```
+
 - 예시
 
 ```ts
 type NonString = Exclude<string | number | boolean, string>;
+```
+
+```ts
+type A = Exclude<string | boolean, boolean>; // string
+```
+
+### 2-2. Extract<T, U> - 추출하고 싶은 필터링
+
+#### 기본동작
+
+- `Extract<UnionType, ExtractedMembers>` 는 유니온에서 특정 타입만 추출한다. Exclude의 반대개념이다.
+- 조건부 타입으로 T가 U에 할당 가능하면 T를 반환, 아니면 never
+- Extract는 조건만족이면 T, 아니면 제거 never 필터링 반대 방향
+
+```ts
+type Extract<T, U> = T extends U ? T : never;
+```
+
+- 예시
+
+```ts
+type OnlyBoolean = Extract<string | number | boolean, boolean>; // boolean
+```
+
+Extract<string | boolean, boolean>
+
+분배 → Extract<string, boolean> | Extract<boolean, boolean>
+
+결과 → never | boolean
+
+최종 → boolean
+
+```ts
+interface ClickEvent {
+  type: "click";
+  x: number;
+  y: number;
+}
+interface KeyEvent {
+  type: "keypress";
+  key: string;
+}
+
+type UIEvent = ClickEvent | KeyEvent;
+type MouseEvent = Extract<UIEvent, { type: "click" }>; // ClickEvent 타입
 ```
