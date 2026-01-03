@@ -300,3 +300,76 @@ interface KeyEvent {
 type UIEvent = ClickEvent | KeyEvent;
 type MouseEvent = Extract<UIEvent, { type: "click" }>; // ClickEvent 타입
 ```
+
+### 2-3. ReturnType<T> - 함수의 반환 타입 추출
+
+#### 기본 동작
+
+- `ReturnType<FuncType>` 함수의 반환 타입을 추출한다.
+- 내부구현은 `infer  R`로 반환값을 추론한다.
+- 반환 타입 자리에 들어오는 타입을 타입 변수처럼 캡처해야 한다.
+
+```ts
+type ReturnType<T extends (...args: any) => any> = T extends infer R
+  ? R
+  : never;
+```
+
+- T가 함수면, 반환 타입을 R로 추론해서 R을 반환한다.
+- 함수가 아니면 never
+- `typeof funcA 가 () => string이면,
+- `infer R` 자리에 `string`이 들어가서 `ReturnType<typeof funcA> = string`
+
+```ts
+function fetchData(): Promise<string> {
+  return Promise.resolve("data");
+}
+type DataType = ReturnType<typeof fetchData>; // Promise<string>
+```
+
+```ts
+function funcA() {
+  return "hello";
+}
+
+function funcB() {
+  return 10;
+}
+
+type ReturnA = ReturnType<typeof funcA>; // string
+type ReturnB = ReturnType<typeof funcB>; // number
+```
+
+### 2-4. NonNullable<T> - null/undefined 제거
+
+#### 기본 동작
+
+- `NonNullable<Type>`은 유니온 타입에서 `null | undefined`를 제거, 안전한 타입으로 만든다.
+
+```ts
+type NonNullable<T> = Exclude<T, null | undefined>;
+```
+
+- Exclude<string | null | undefined, null | nudefined>
+- Exclude<string, null | undefined> | Exclude<null, null | undefined> | Exclude<undefined, null | undefined>
+- string | never | never -> string
+
+- 예시
+
+```ts
+type SafeUser = NonNullable<User | null>;
+
+function UserProfile({ user }: { user: User | null }) {
+  if (!user) return null;
+
+  // 여기부터는 NonNullable로 안전화해서 재사용 가능
+  const safeUser: SafeUser = user;
+  return <div>{safeUser.name}</div>;
+}
+```
+
+### 2-5. Parameters<T> - 함수 매개변수 타입 추출
+
+### 2-6. Awaited<T> - Promise 내부 타입 추출
+
+### 2-7. Uppercase<T>/Lowercase<T> - 문자열 리터럴 타입 변환
