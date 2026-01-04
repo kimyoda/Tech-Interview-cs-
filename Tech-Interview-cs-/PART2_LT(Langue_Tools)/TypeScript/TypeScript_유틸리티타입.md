@@ -300,3 +300,173 @@ interface KeyEvent {
 type UIEvent = ClickEvent | KeyEvent;
 type MouseEvent = Extract<UIEvent, { type: "click" }>; // ClickEvent 타입
 ```
+
+### 2-3. ReturnType<T> - 함수의 반환 타입 추출
+
+#### 기본 동작
+
+- `ReturnType<FuncType>` 함수의 반환 타입을 추출한다.
+- 내부구현은 `infer  R`로 반환값을 추론한다.
+- 반환 타입 자리에 들어오는 타입을 타입 변수처럼 캡처해야 한다.
+
+```ts
+type ReturnType<T extends (...args: any) => any> = T extends infer R
+  ? R
+  : never;
+```
+
+- T가 함수면, 반환 타입을 R로 추론해서 R을 반환한다.
+- 함수가 아니면 never
+- `typeof funcA 가 () => string이면,
+- `infer R` 자리에 `string`이 들어가서 `ReturnType<typeof funcA> = string`
+
+```ts
+function fetchData(): Promise<string> {
+  return Promise.resolve("data");
+}
+type DataType = ReturnType<typeof fetchData>; // Promise<string>
+```
+
+```ts
+function funcA() {
+  return "hello";
+}
+
+function funcB() {
+  return 10;
+}
+
+type ReturnA = ReturnType<typeof funcA>; // string
+type ReturnB = ReturnType<typeof funcB>; // number
+```
+
+### 2-4. NonNullable<T> - null/undefined 제거
+
+#### 기본 동작
+
+- `NonNullable<Type>`은 유니온 타입에서 `null | undefined`를 제거, 안전한 타입으로 만든다.
+
+```ts
+type NonNullable<T> = Exclude<T, null | undefined>;
+```
+
+- Exclude<string | null | undefined, null | nudefined>
+- Exclude<string, null | undefined> | Exclude<null, null | undefined> | Exclude<undefined, null | undefined>
+- string | never | never -> string
+
+- 예시
+
+```ts
+type SafeUser = NonNullable<User | null>;
+
+function UserProfile({ user }: { user: User | null }) {
+  if (!user) return null;
+
+  // 여기부터는 NonNullable로 안전화해서 재사용 가능
+  const safeUser: SafeUser = user;
+  return <div>{safeUser.name}</div>;
+}
+```
+
+### 2-5. Parameters<T> - 함수 매개변수 타입 추출
+
+#### 기본동작
+
+- `Parameters<Type>`는 함수 타입의 매개변수 목록을 "튜플 타입"으로 추출한다.
+
+```ts
+type Parameters<T extends (...args: any) => any> = T extends (
+  ...args: infer P
+) => any
+  ? P
+  : never;
+```
+
+- `infer P`는 매개변수에 들어오는 타입을 P로 추론한다.
+- T가 함수면 (...args: P) => any 형태로 매칭을 시도, 매칭되면 P(튜플)을 반환한다.
+
+- 예시
+
+```ts
+function login(username: string, password: string) {}
+
+type LoginParams = Parameters<typeof login>; // [string, string]
+```
+
+- typeof login => (username: string, password: string) => void
+- `T extends (...args: infer P) => any`
+- `P = [string, string]` -> `LoginParams = [string, string]`;
+
+### 2-6. Awaited<T> - Promise 내부 타입 추출
+
+#### 기본 동작
+
+- `Awaited<Type>`은 `Promise`를 재귀적으로 풀어 최종 resolve 타입을 만든다.
+- `Promise<Promise<string>>` 같은 중첩도 확인한다.
+
+```ts
+type Awaited<T> = T extends null | undefined
+  ? T
+  : T extends PromiseLike<infer U>
+  ? Awaited<U>
+  : T;
+```
+
+- 실제 TS 표준 라이브러리의 Awaited는 thenable 처리
+
+- T가 `PromiseLike<...>`면, `infer U` 로 내부 타입을 뽑는다
+- 다시 `Awaited<U>`로 재귀 호출해서 중첩 Promise를 끝까지 푼다.
+- `null | undefined`는 별도로 처리, 반환하는 케이스가 있다.
+
+```ts
+type Resolved = Awaited<Promise<Promise<string>>>;
+```
+
+- `T = Promise<Promise<string>>`
+- `T extends PromiseLike<infer U>` -> `U = Promise<string>`
+- `Awaited<Promise<string>>`
+- `T = Promise<string>`
+- `U = string` -> `Awaited<string>`
+- `Resolved = string`
+
+```ts
+async function fetchUser() {
+  return { id: "1", name: "kim" };
+}
+
+type FetchUserResult = Awaited<ReturnType<typeof fetchUser>>;
+// {id: string, name: string};
+```
+
+### 2-7. Uppercase<T>/Lowercase<T> - 문자열 리터럴 타입 변환
+
+#### 기본 동작
+
+- `Uppercase<StringType>`는 문자열 리터럴 타입을 대문자로 바꾼다.
+- `Lowercase`, `Capitalize`, `Uncapitallize`도 같은 느낌이다.
+
+- 표준 라이브러리는 아래와 같다.
+
+```ts
+tpye Uppercase<S extends string> = intrinsic;
+tpye Lowercase<S extends string> = intrinsic;
+```
+
+- 여기서 `intrinsic`는 TS 컴파일러가 내부적으로 처리한다.
+- 문자열 리터럴 유니온이면 멤버별로 변환된 유니온을 만든다.
+
+- 입력이 "click" | "hover" 같은 유니온이면 -> "CLICK" | "HOVER"로 바뀐다.
+- 멤버별 매핑이 일어난다.
+
+```ts
+type Shout = Uppercase<"hello">; //"HELLO"
+
+type EventType = Uppercase<"click" | "hover">;
+// "click" -> "CLICK"
+// "hover" -> "HOVER"
+```
+
+- NonNullable: `null | undefined`를 타입에 제거해 안전한 값만 남긴다.
+- Parameters: 함수의 인자 타입을 튜플로 뽑아 타입 재사용성을 높인다.
+- Awaited: Promise 중첩을 재귀적으로 풀어 최종 resolve 타입을 얻는다.
+- Uppercase/Lowercase: 문자열 리터럴 타입을 내장 변환으로 표준화한다(대문자/소문자)
