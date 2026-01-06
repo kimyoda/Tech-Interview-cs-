@@ -132,3 +132,46 @@
 - 백업: 호스트에서 볼륨 데이터 디렉터리를 tar로 백업
 - 정리: 사용하지 않는 볼륨을 `docker volume prune`으로 제거
 - 라이프사이클: 컨테이너가 삭제되어도 볼륨 데이터는 남아있어 재사용과 백업에 유리하다.
+
+---
+
+## 6. Docekr Compose
+
+### 6.1 Compose의 목적과 기능
+
+- Docker Compose는 여러 컨테이너로 구성된 애플리케이션을 정의하고 실행하는 도구다.
+- YAML 형식의 `docker-compose.yml` 파일에 서비스, 네트워크, 볼륨을 선언한 후 한 번의 명령으로 전체 스택을 실행하거나 중지할 수 있다.
+- Compose는 다중 환경(개발, 테스트, 스테이징, 운영)에서 일관된 동작을 보장하고 다음과 같은 기능을 제공한다.
+  - 서비스 관리: YAML 파일에 각 컨테이너의 이미지, 포트, 환경 변수, 볼륨 등을 정의한다.
+  - 전체 스택 제어: `docker compose up` 으로 모든 서비스를 시작하고 `docker compose down` 으로 정리한다.
+  - 라이프사이클 관리: 서비스의 상태 확인, 로그 스트리밍, 특정 서비스만 재시작 등 여러 명령을 제공한다.
+  - 환경 독립성: Compose 파일 하나로 개발, 테스트, CI/CD 환경을 동일하게 설정할 수 있어 협업과 배포가 간편하다.
+
+### 6.2 Compose 파일 구조
+
+```yaml
+version: "3.8"
+services:
+  web:
+    build: .
+    ports:
+      - "5000:5000"
+    depends_on:
+      - db
+  db:
+    image: postgres:13
+    environment:
+      POSTGRES_DB: myapp
+    volumes: -db_data:/var/lib/postgresql/data
+volumes:
+  db_data:
+```
+
+- `services`: 섹션에 각 컨테이너를 정의한다. `build`는 현재 디렉터리의 Dockerfil로 이미지를 빌드, `image`는 이미 존재하는 이미지 사용을 의미한다.
+- `depends_on`은 의존성을 지정, `db` 서비스가 먼저 시작되도록 한다.
+- `volumes` 섹션에 외부 볼륨을 선언하여 데이터 지속성을 보장한다.
+
+### 6.3 docker run과 Compose의 차이
+
+- `docker run`: 단일 컨테이너를 실행할 때 사용한다. 간단한 테스트나 일회성 작업에 적합, 여러 컨테이너가 필요한 애플리케이션을 관리하기에 불편하다.
+- Docker Compose: 멀티 컨테이너 애플리케이션을 하나의 YAML 파일로 선언하고 한번에 실행한다. 웹 서버와 데이터베이스, 캐시 서버 등 여러 서비스를 함께 관리할 수 있고, 의존성, 네트워크, 볼륨을 자동으로 설정한다.
