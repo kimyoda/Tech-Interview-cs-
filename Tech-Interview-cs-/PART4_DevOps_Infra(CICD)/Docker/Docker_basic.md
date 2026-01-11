@@ -190,3 +190,89 @@ volumes:
 - 보안강화: 볼륨과 네트워크 권한을 최소화, 필요한 겨웅 Macvlan이나 None 드라이버를 이용해 보안 요구에 맞는 격리 수준을 제공한다.
 
 - Docker와 Docker Compose를 적절히 활용하여 기본 개념을 이해하고 실전에서 적용하는데 도움이 되길 바란다.
+
+---
+
+## 8. Compose 실전 예시 분석
+
+- 다수의 Composee 파일 분석, 구조적 요소 확인
+- 프론트엔드, 백엔드 API, worker 서비스, 데이터베이스, 캐시 등 컨테이너를 스택으로 구성
+- `docker-compose.yml`
+
+```yaml
+version:
+services:
+  web:
+    container_name: web-app
+    image: myapp:${APP_VERSION}
+    build:
+      context: .
+      dockerfile: ./Dockerfile
+    ports:
+      - "8080:80"
+    volumes:
+      - .:/bar/ww/html
+      - app-storage:/var/www/html/storage
+    environment:
+      APP_ENV: production
+      QUEUE_CONNECTION: redis
+    networks:
+      - app-net
+      - cache-net
+    depends_on:
+      db:
+        condition: service_healthy
+    healthCheck:
+      test: ["CMD", "curl", "-f", "http://localhost"]
+      interval: 30s
+      timeout: 10s
+      retries: 3
+    worker1:
+      build:
+        context: ./workers
+        dockerfile: Dockerfile
+      restart: unless-stopped
+    depends_on:
+      web:
+        condition: service_healthy
+    environment:
+      APP_ENV: production
+      QUEUE_CONNECTION: redis
+    volumes:
+      - .:/var/www/html
+  worker2:
+    <<: *worker1 # 두 번째 워커는 설정을 재사용
+networks:
+  app-net:
+    driver: bridge
+  cache-net:
+    external: true
+volumes:
+  app-storage:
+```
+
+### 8.1 서비스 정의와 공통 옵션
+
+- Compose의 `services` 섹션에는 각 컨테이너의 설정이 나열된다.
+  - `container_name`: 기본적으로 Compose는 서비스 이름과 인덱스를 조합해 컨테이너 이름을 자동 생성한다. 필요한 경우 `container_name`으로 직접 이름을 지정할 수 있으나, 해당 서비스는 더이상 스케일링 할 수 없다. 가능한 경우에 기본 이름을 사용해 확장성을 유지하는 것이 좋다.
+  - `image` vs `build`: `image`는 `[리포지토리/]이름[:태그]` 형태의 이미지를 지정, 이미지가 로컬에 없으면 Compose가 자동으로 가져온다. `build`는 로컬 소스코드로 이미지를 생성하는 옵션, `context`는 빌드에 사용할 디렉터리나 Git URL을 지정하고, `docekrfile`은 Dockerfile 대신 다른 파일을 사용할 때 사용한다. `args`를 사용하면 빌드 단계에서 변수를 전달할 수 있다. 두 옵션을 함께 지정하면 지정한 태그로 이미지를 빌드하고 캐시할 수 있다.
+  - `ports`: 컨테이너 포트를 호스트 포트에 매핑한다. 짧은 형식은 `"호스트포트:컨테이너포트/프로토콜"` 프로토콜을 생략하면 기본값은 TCP다. 하나의 숫자만 지정하면 컨테이너 포트만 설정되고 호스트 포트는 자동으로 할당된다. YAML에서 : 문자는 시간 표기로 인식될 수 있어 따옴표로 감싸는 것이 좋다.
+  - `volumes`: 컨테이너 내부 경로를 호스트 경로 또는 이름있는 볼륨에 매핑한다. 짧은 형식은` 소스:대상[:옵션]` 이고, 소스가 경로이면 바인드 마운트, 소스가 이름이면 불륨 마운트이다. 옵션으로 `ro(읽기전용)`, `rw(읽고/쓰기)`, 등을 설정할 수 있다. 볼륨은 컴테이너를 삭제해도 데이터가 남아 지속성을 제공한다.
+  - `networks`: 서비스가 연결될 때 네트워크를 정의, 상위 `networks` 섹션에 명시된 네트워크 이름을 참조한다. 위 예제에는 `app-net(사용자 정의 bridge)`와 `cache-net(외부네트워크)` 두 개에 컨테이너를 연결했다. 사용자 정의 브리지 네트워크는 자동 DNS 해결과 격리성을 제공, `external: true` 옵션을 사용하면 이미 존재하는 네트워크를 재사용한다.
+  - `environment`: 서비스 내부에 사용할 환경 변수를 설정한다. 목록 형식 또는 매핑 형식을 사용할 수 있고, 값이 생략되면 시스템 환경 변수에서 값을 가져온다. 변수를 문자열로 감싸지 않아도 되고, `${VAR}`형태로 다른 변수를 참조할 수 있다.
+  - `restart`: 컨테이너가 종료될 때 자동 재시작을 설정하는 옵션이다. `unless-stopped`는 컨테이너가 실패로 종료되거나 Docker 데몬이 재시작할 때, 재시작하나, 사용자가 명시적으로 컨테이너를 정지한 경우 재시작하지 않는다. 재시작 정책은 컨테이너가 10초 이상 실행된 이후부터 적용된다.
+  - `depends_on`: 서비스 간 의존 관계를 정의한다. 짧은 형식은 단순히 다른 서비스가 먼저 시작되도록 정의, 긴 형식은 `condition`을 통해 의존 서비스가 특정 상태일때까지 기다린다. `service_healthy`는 의존 서비스의 헬스 체크가 성공할 때까지 기다리고, `service_completed_successfully`는 일회성 작업이 성공적으로 종료되었는 지 확인한다.
+  - `healthcheck`: 컨테이너가 정상인지 판단하는 명령을 정의한다. `test`는 실행할 명령, 배열 또는 문자열으로 작성, `interval`, `timeout`, `retries`, `start_period` 등을 설정할 수 있다. Compose는 상태를 `unhealthy`로 표시, 다른 서비스의 `depends_on`조건에 활용할 수 있다.
+  - `extra_hosts`: 컨테이너의 `/etc/hosts`에 호스트 이름과 IP를 추가한다. 짧은 형식에서 `HOSTNAME=IP` 또는 `HOSTNAME:IP`로 표기, IPv6 주소도 지원한다.
+
+### 8.2 여러 워커 서비스와 확장성
+
+- 두 워커는 동일한 Dockerfile과 소스 코드를 기반으로 하나, 각각 별도의 컨테이너로 실행된다.
+  - 수평 확장: 동일한 서비스 정의를 반복하거나 YAML 앵커(<<=)를 활용해 설정을 재사용하여 여러 워커를 쉽게 추가할 수 있다. `container_name`을 지정하지 않아야 복수 인스턴스를 스케일링 할 수 있다.
+  - 독립적 재시작: 각 워커는 `resart: unless-stopped` 을 통해 백그라운드에서 안정적으로 실행된다. 워커가 예기치 않게 종료되도 자동으로 재시작되어 작업 큐 처리가 중단되지 않는다.
+  - 환경 변수와 큐 설정: `QUEUE_CONNECTION` 등 환경 변수를 통해 Redis를 연결할 수 있다. 각 워커는 공통 코드를 공유하는 블륨을 마운트, 필요시 별도의 로깅 볼륨을 추가한다.
+
+### 8.3 네트워크 및 볼륨 설계
+
+- 네트워크 정의: 사용자 정의 네트워크는 이름과 드라이버를 지정할 수 있다. `app-net`은 Bride 드라이버를 사용하여 같은 호스트 내의 서비스끼리 통신, `cahce-net`은 `external: true`로 정의, 이미 생성된 캐시 클러스터 네트워크에 컨테이너를 연결한다. 사용자 정의 네트워크는 기본 `docker0`보다 나은 DNS 해결과 격리성을 제공한다.
+- 볼륨 정의: 상위 `volumes` 섹션에 이름을 선언하면 Compose가 실행될 때 해당 볼륨을 자동으로 생성한다. 볼륨은 데이터베이스, 업로드 파일, 캐시 등 지속성이 필요한 데이터를 저장하는데 적합, 여러 서비스에서 동시에 사용할 수 있다.
