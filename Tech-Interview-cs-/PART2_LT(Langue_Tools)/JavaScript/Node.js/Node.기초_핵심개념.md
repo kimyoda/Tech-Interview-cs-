@@ -33,3 +33,35 @@
 ## 2. 서버와 런타임: Node.js는 어떻게 사용?
 
 ### 2-1. 🌅 서버란?
+- 서버는 네트워크를 통해 클라에게 정보나 서비스를 제공하는 프로그램 또는 컴퓨터이다.
+- 웹 브라우저, 데스크톱 앱, 다른 서버 등 클라이언트가 요청(request)을 보내면 서버는 응답(response)을 반환한다.
+- 브라우저 주소창에 URL을 입력하면 브라우저는 해당 서버에 HTML, 이미지 등을 요청, 서버는 이를 응답으로 전송한다.
+- 앱스토어에서 애플리케이션을 다운로드할때도 서버가 클라에게 설치 파일을 제공한다.
+
+### 2-2 Node.js의 서버 역할
+- Node.js는 기본적으로 싱글 스레드에 비동기 I/O 모델을 사용, 서버 프로그래밍에 적합하다.
+- `http` 모듈을 포함 표준 라이브러리를 통해 HTTP 서버를 손쉽게 만들수 있고, 네트워크, 파일 시스템, 프로세스 제어 등 다양한 모듈을 제공한다.
+- 이러한 특성 덕분에 Node.js는 실시간 채팅, 스트리밍, API 서버와 같이 I/O 요청이 많은 애플리케이션에 자주 사용된다.
+```JS
+const http = require('node:http');
+
+const server = http.createSever((req, res) => {
+   res.writeHead(200, { 'Content-Type': 'text/plain'});
+   res.end('Hello from Node.js server!');
+});
+
+server.listen(3000, () => {
+   console.log('Listening on http://localhost:3000');
+});
+```
+
+### 2-3 Node.js 아키텍처
+- Node.js는 여러 구성요소로 이루어져있다.
+| 구성 요소 | 역할 |
+| :--- | :--- |
+| **JavaScript 코드** | 개발자가 작성하는 애플리케이션 로직 |
+| **Node.js API** | `fs`, `http`, `path` 등 파일·네트워크 처리 기능 제공 |
+| **바인딩(Bindings)** | C++로 작성된 Node.js 내부 모듈과 JavaScript 사이의 연결 역할 |
+| **V8 엔진** | JavaScript를 JIT 컴파일해 실행하는 엔진 |
+| **libuv** | 이벤트 루프와 스레드 풀을 구현하고 비동기 I/O를 담당 |
+| **운영 체제** | 파일 시스템, 네트워크, 프로세스 관리 등 하드웨어 자원 제공 |
