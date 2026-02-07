@@ -2,12 +2,15 @@
 
 ### 📚 목차
 
-1. [배포 후 설정이 읽히지 않는다](#1-문제-요약)
-2. [왜 env()가 NULL이 되는가?](#2-왜-env가-null이-되는가)
-3. [재현 방법 (로컬 vs 캐시 후)](#3-재현-방법-로컬-vs-캐시-후)
-4. [해결 전략: env() → config()](#4-해결-전략-env--config)
-5. [예제 코드 (Before / After)](#5-예제-코드-before--after)
-4. [예제](#)
+- [🌐 Laravel 배포 트러블 슈팅: `env()` 가 null을 반환할 때](#-laravel-배포-트러블-슈팅-env-가-null을-반환할-때)
+    - [📚 목차](#-목차)
+  - [1. 문제 요약](#1-문제-요약)
+  - [2. 왜 env()가 NULL이 되는가?](#2-왜-env가-null이-되는가)
+  - [3. 재현 방법 (로컬, 캐시 후)](#3-재현-방법-로컬-캐시-후)
+- [운영 환경](#운영-환경)
+  - [4. 해결 전략:  env() -\> config()](#4-해결-전략--env---config)
+  - [5. 예제 코드](#5-예제-코드)
+    - [배포, 운영 체크](#배포-운영-체크)
 ---
 
 ## 1. 문제 요약
@@ -34,7 +37,107 @@ $iamgeUrl = env('CDN_BASE_URL') . '/images/example.jpg';
 
    - 캐싱이 되는 순간, `env` 는 로드되지 않아 설정 파일(`config/*.php`) 내부를 제외한 코드(컨트롤러, 서비스, 뷰 등)에서 호출하는 `env()`는 전부 `NULL`을 반환하게 된다ㅏ.
 
+## 3. 재현 방법 (로컬, 캐시 후)
 
-    
+```bash
+# 로컬 환경
+php artisan config:clear
+php artisan tinker
+>>> env('CDN_BASE_URL')
+=> "https://date.app.example.jp/"
+```
+- `.env`값이 정상 출력된다.
+
+# 운영 환경 
+```bash
+php artisan config:cache
+php artisan tinker
+>>> env('CDN_BASE_URL')
+=> null
+```
+- 하지만 `config()`로 접근하면 값이 나온다.
+```bash
+>>> config('app.cdn.base_url')
+
+>>> config('filesystems.cdn_base_url') // 프로젝트에 따라 매핑 위치가 다르다.
+```
+
+## 4. 해결 전략:  env() -> config()
+- `.env`에 있는 값은 `config/*.php`에 매핑한다.
+- 애플리케이션 코드는 `env()`가 아니라 `config()`로 읽는다.
+
+-> `config:cache` 이후에
+  - 설정 값은 캐시(`bootstrap/cache/config.php`)를 통해 제공된다.
+  - `config()`는 캐시된 설정을 안정적으로 읽을 수 있기 때문이다.
+
+
+---
+
+## 5. 예제 코드
+
+5-1 .env 예시
+```php
+APP_ENV_NAME="dev-example"
+CDN_BASE_URL="https://data.app.example.jp/"
+CDN_IMAGE_DIR="/html/examples"
+CDN_IMAGE_INFO_DIR="/example_banner"
+```
+
+5-2. Before: 컨트롤러에서 env() 직접 사용
+```php
+// 파일 업로드 부분만
+if ($request->file('file')) {
+  $appEnvName = '/' . env('APP_ENV_NAME'. "dev-exmaple-2026");
+  $imageUrl = $appEnvName . env('CDN_IMAGE_DIR');
+  $bannerImageUrl = $imageUrl . env('CDN_IMAGE_INFO_DIR');
+};
+
+$fileUrl = env('CDN_BASE_URL') . $filePath;
+```
+
+5-3. config/app.php에 CDN 설정 매핑 추가
+> env()는 여기(config 파일)에서 사용한다.
+```php
+// coonfig/app.php
+
+return [
+    // 프로젝트 사용 중인 env_name
+    'env_name' => env('APP_ENV_NAME', 'dev-example-2026'),
+
+    // CDN 관련설정
+    'cdn' => [
+      'base_url' => env('CDN_BASE_URL', 'http://localhost'),
+      'image_dir' => env('CDN_IMAGE_DIR', ''),
+      'image_info_dir' => env('CDN_IMAGE_INFO_DIR');
+    ],
+  ];
+```
+
+5-4. After: 컨트롤러에서 config()사용
+```php
+// 파일 업로드 부분만
+if ($request->file('file')) {
+  $appEnvName = '/' . config('app.env_name'. "dev-exmaple-2026");
+  $imageUrl = $appEnvName . config('app.cdn.base_url', '');
+  $bannerImageUrl = $imageUrl . config('app.cdn.image_info_dir', '');
+};
+
+$fileUrl = $baseUrl . $filePath;
+```
+
+- 앞으로는 환경 변수는 `config` 폴더 내 파일 등 매핑에서 사용하는 것을 권유한다.
+
+
+---
+
+### 배포, 운영 체크
+
+- `php artisan config:cache`는 성능상 권장한다.
+- 단, config 파일 밖에서 env() 호출하는건 지양한다.
+
+- .env 수정 후 반영이 안될때는
+- `php arttisan cofnig:clear`, `php artisan optimize:clear` 라는 명령어를 입력한다.
+
+
    
 
