@@ -38,3 +38,15 @@
 - `SMEMBERS`는 집합의 모든 멤버를 반환한다.
 - `SCARD`는 집합의 크기를 확인한다.
 - `SISMEMBER`는 특정 멤버 존재 여부를 확인한다.
+
+**정렬된 집합(Sorted Sets)**
+- 정렬된 집합은 각 멤버에 점수(score)가 할당된 집합으로, 순위 계산에 적합하다.
+- `ZADO key scroe member` 명령으로 멤버를 추가한다.
+- `ZRANGE key start stop[WITHSCORES]`는 점수 순으로 지정된 구간의 멤버를 반환한다.
+
+## 일반적으로 유용한 명령어
+- `KEYS pattern` 은 패턴에 매칭되는 모든 키를 반환하지만 전체 데이터베이스를 순회하므로 생산 환경에서는 사용에 주의해야 한다.
+- `SCAN cursor [MATCH pattern]` 은 반복 가능한 방식으로 키를 조회하여 `KEYS`보다 안전하게 사용할 수 있다.
+- `EXISTS key`는 키 존재 여부를 확인, `DEL key`는 키와 값을 삭제한다.
+- `EXPIRE key seconds`는 키의 만료 시간을 설정, `TTL key`는 TTL을 반환한다.
+- `INFO` 명령은 서버 상태, 메모리 사용량, 복제 상태 등 다양한 정보를 출력한다. 
