@@ -46,6 +46,7 @@ EXPIRE login:fail:user123 600
 - `GET` 명령은 키에 저장된 값을 가져오며, 존재하지 않는 키는 `nil`을 반환한다.
 - 여러 키를 한번에 조회할 때는 `MGET`을 사용한다.
 - 숫자 값을 1씩 증가시키는 `INCR` 명령은 카운터 구현에 유용하다.
+- `SET key value`, `GET key`, `MGET key1 key2 ...`, `INCR key`, `DECR key`, `SET key value NX(키가 없을때만 저장)`, `SET key value XX(키가 있을때만 저장)`
 
 ```bash
 SET page:view:home 100
@@ -59,6 +60,13 @@ GET page:view:home
 - `HSET`은 지정된 필드에 값을 저장하고 새로운 필드면 1을 반환한다.
 - `HGET`은 해시에서 특정 필드의 값을 조회한다
 - `HGETALL`은 해시의 모든 필드와 값을 반환한다.
+- `HSET key filed value`, `HGET key field`, `HGETALL key`, `HMGETkey field1 field2 ...`, `HDEL key field`
+
+```bash
+HSET user:1001 name "Kim" age 29 city "Seoul"
+HGET user:1001 name
+HGETALL user:1001
+```
 
 **리스트(Lists)**
 
@@ -67,6 +75,13 @@ GET page:view:home
 - `RPUSH`는 꼬리에 삽입한다.
 - `LRANGE key start stop`은 지정된 범위의 요소를 반환한다.
 - `LLEN`은 리스트 길이를 반환한다. 큐와 스택 모두를 간단히 구현할 수 있다.
+- `LPUSH key value`, `RPUSH key value`, `LPOP key`, `RPOP key`, `LRANGE key start stop`, `LLEN key`
+
+```bash
+RPUSH queue:email "job1" "job2" "job3"
+LPOP queue:email
+LLEN queue:email
+```
 
 **집합(Sets)**
 
@@ -75,12 +90,25 @@ GET page:view:home
 - `SMEMBERS`는 집합의 모든 멤버를 반환한다.
 - `SCARD`는 집합의 크기를 확인한다.
 - `SISMEMBER`는 특정 멤버 존재 여부를 확인한다.
+- `SADD key member`, `SMEMBERS key`, `SCARD key`, `SISMEBER key member`, `SREM key member`
+
+```bash
+SADD post:1:tags "redis" "nosql" "cache"
+SISMEMBER post:1:tags "redis"
+SMEMBERS post:1:tags
+```
 
 **정렬된 집합(Sorted Sets)**
 
 - 정렬된 집합은 각 멤버에 점수(score)가 할당된 집합으로, 순위 계산에 적합하다.
 - `ZADO key scroe member` 명령으로 멤버를 추가한다.
 - `ZRANGE key start stop[WITHSCORES]`는 점수 순으로 지정된 구간의 멤버를 반환한다.
+- `ZADD key score member`, `ZRANGE key start stop WITHSCORES`, `ZREVRANGE key start stop WITHSCORES`, `ZSCORE key member`, `ZREM key member`
+
+```bash
+ZADD game:rank 1200 user:1 950 user:2 1800 user:3
+ZREVRANGE game:rank 0 2 WITHSCORES
+```
 
 ## 일반적으로 유용한 명령어
 
