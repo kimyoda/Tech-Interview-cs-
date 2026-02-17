@@ -132,12 +132,11 @@ $fileUrl = $baseUrl . $filePath;
 
 ### 배포, 운영 체크
 
-- `php artisan config:cache`는 성능상 권장한다.
+- **배포 파이프라인에서 캐시 생성**: `php artisan config:cache`는 성능상 권장한다. 개발 환경에서는 자주 설정을 변경하여 캐싱을 사용하지 않거나 변경 후 캐시를 지워야 한다.
 - 단, config 파일 밖에서 env() 호출하는건 지양한다.
 
-- .env 수정 후 반영이 안될때는
-- `php arttisan cofnig:clear`, `php artisan optimize:clear` 라는 명령어를 입력한다.
-
+- **캐시 제거 명령어 활용**: `php arttisan cofnig:clear`, `php artisan optimize:clear` 라는 명령어를 입력한다.
+- **`env()` 사용 범위 제한**: `env()`는 설정 파일내에서 사용, 그 외 코드에서는 항상 `config()`를 통해 값을 가져오도록 한다.
 
    
 
