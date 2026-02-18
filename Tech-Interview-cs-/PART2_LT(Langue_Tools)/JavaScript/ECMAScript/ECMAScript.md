@@ -85,3 +85,49 @@
 ## 3. ES2020 ~ ES2023
 
 ### 3.1 ES2020: BigInt, dynamic import, 옵셔널 체이닝 등
+
+- `BigInt`는 임의 정밀도의 정수를 표현하는 타입, `123n`처럼 숫자 뒤에 `n`을 붙여 선언한다.
+- **동적 import(`import()`)**와 `import.meta`로 조건부 모듈 로딩과 모듈 메타 정보를 얻을 수 있다.
+- **옵셔널 체이닝(`?.`)**과 **Null 병합 연산자(`??`)**는 안전하게 깊은 속성을 접근하거나 기본값을 제공하는데 유용하다.
+- `Promise.allSettled()`, `globalThis`, `String.matchAll()`, 네임스페이스 재수출 등도 실무에서 자주 사용된다.
+
+### 3.2 ES2021: 논리 할당, replaceAll, Promise.any, WeakRef
+
+- ES2021에서 `x ||= y`, `x &&= y`와 같은 논리 할당 연산자가 도입돼 값이 없을때만 할당하는 패턴을 간결하게 표현한다.
+- 문자열에서 모든 일치 항목을 교체하는 `String.prototype.replaceAll()`이 추가 되었다.
+- `Promise.any()`은 여러 프라미스 중 가장 먼저 이행된 값만 반환한다.
+- `WeakRef`와 `FinalizationRegistry`는 가비지 컬렉션 후 후처리를 수행할 수 있게 해 메모리 관리 도구를 제공한다.
+
+### 3.3 ES2022: 클래스 필드, 프라이빗 슬롯, top-level await
+
+- ES2022는 클래스 문법을 대폭 확장했다. 공개, 비공개 필드와 정적 필드, 비공개 메서드, 정적 초기화 블록 등을 지원해 명시적인 캡슐화를 가능하개 한다.
+- `#privateSlot in obj` 문법으로 프라이빗 필드 존재 여부를 확인할 수 있다.
+- `Object.hasOwn()`을 통해 객체 자신의 프로퍼티 여부를 안전하게 확인할 수 있다.
+- Node.js 14 이상에서 모듈의 top-level await도 지원되어 모듈 스코프에서 `await`를 사용할 수 있다.
+
+### 3.4 ES2023: 비파괴적 배열 메서드, `findLast`/`findLastIndex`, WeakMap 키, 헤시뱅
+
+- ES2023은 불변 데이터 패턴을 지원하는 비파괴적 배열 메서드를 제공한다.
+- `toReversed()`, `toSorted()`, `toSpliced()`, `.with()`메서드는 원본 배열을 수정하지 않고 새로운 배열을 반환한다.
+- `findLast()`와 `findLastIndex()`로 배열을 뒤에서부터 탐색할 수 있다.
+- 심볼을 `WeakMap`의 키로 사용할 수 있게 되었다.
+- Node.js 스크립트 실행 시 사용하던 "해시뱅(`#!/user/bin/env mode`)"문법도 표준화되었다.
+
+---
+
+## 4. ES2024 ~ ES2025 - 그룹화, Iterator helpers, 세트 연산 등
+
+### 4.1 ES2025: groupBy와 v플래그
+
+- 2024년 ECMAScript는 데이터 그룹화와 정규식 확장이 주요했다.
+- **`Object.groupBy()`와 `Map.groupBy()`**는 배열이나 iterable을 주어진 함수의 반환값에 따라 그룹화한다.
+- 사용자 목록을 역할별로 그룹화하거나 학생 점수를 등급별로 묶는 등의 작업을 쉽게 처리할 수 있다.
+- **`Promise.withResolvers()`**는 외부에서 resolve/reject 함수를 제어할 수 있는 프로미스를 생성한다.
+- 정규식 v 플래그는 유니코드 집합과 세트 연산을 지원하여 문자 클래스를 더 유연하게 표현할 수 있고 문자열의 유효성을 확인, 보정하는 `String.isWellFormed()`/`String.toWellFormed()`메서드도 도입되었다.
+
+### 4.2 ES2025: Import attributes, lterator helpers, Set 연산, RegExp escape
+
+- ES2025는 모듈과 컬렉션 처리에 큰 변화를 가져올 예정이다. Import attributes는 JSON 등 비자바스크립트 모듈을 가져올 때 `import data from './data.json' with { type: 'json' };` 처럼 타입을 명시할 수 있다.
+- 내장 Iterator helper methods(`filter()`, `map()`, `flatMap()`, `take()`, `drop()`, `toArray()` 등)는 이터러블 데이터를 배열처럼 변환없이 처리할 수 있어, 대용량 데이터나 스트림 처리에서 유용하다.
+- `Set`에는 집합 연산 메서드(`union`, `intersection`, `difference`, `symmetricDifference`, `isSubsetOf`, `isSupersetOf`)가 추가되어 수학적 집합 연산을 직접 수행할 수 있다.
+- `RegExp.escape()`와 중복 캡쳐 그룹, 인라인 플래그를 지원, `Promise.try()`와 16비트 부동소수타입도 포함된다.
