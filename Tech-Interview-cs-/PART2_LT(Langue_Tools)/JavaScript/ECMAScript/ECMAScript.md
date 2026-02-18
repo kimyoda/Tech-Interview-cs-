@@ -74,3 +74,14 @@
 - 객체에서도 rest/spared 문법이 가능하고, 정규식에 lookbehind assertions, named capture groups, dotAll 플래그 등 기능이 도입되었다.
 
 ### 2.4 ES2019: flat/flatMap, trim, fromEntries, 안정 정렬
+
+- `Array.prototype.flat()`과 `flatMap()`은 중첩된 배열을 평탄화하거나 map 후 평탄화를 동시에 수행한다.
+- `Object.fromEntries()`는 key-value 쌍의 배열을 객체로 변환하고, 반대로 `Object.entries()`와 함께 유용하다.
+- `String.prototoype.trimStart()`/`trimEnd()`은 좌/우 공백을 쉽게 제거한다.
+- 정렬 안정성(stable sort)이 명시되어 V8 엔진 등 구현체에서 일관된 결과를 제공한다.
+
+---
+
+## 3. ES2020 ~ ES2023
+
+### 3.1 ES2020: BigInt, dynamic import, 옵셔널 체이닝 등
