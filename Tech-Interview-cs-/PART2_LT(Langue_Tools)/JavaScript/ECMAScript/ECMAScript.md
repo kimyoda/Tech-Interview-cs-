@@ -50,3 +50,27 @@
 - ES6 프로미스 이후 `async`/`await` 문법(ES2017)과 `Promise.finally()`(ES2018) 등이 추가되며 더욱 기능이 개선되었다.
 
 ## 2. ES2016~ES2019 - 점진적 개선과 편의 기능
+
+- ES6 이후 ECMAScript는 작은 기능들을 발표했다. 2016~2019 사이 추가된 기능들을 확인
+
+### 2.1 ES2016: includes와 거듭제곱 연산자
+
+- ES2016은 두 개의 소규모 기능만 포함한다.
+- 배열에 특정 값이 존재하는지 확인하는 `Array.prototype.includes()`와 제곱을 계산하는 **거듭제곱 연산자 `**`\*\*이다.
+- `includes()`는 `indexOf()`보다 명확하고 `NaN` 비교도 지원한다.
+
+### 2.2 ES2017: async/await, 객체, 문자열 편의 메서드
+
+- `async` 함수와 `await` 키워드는 프로미스 기반 비동기 코드를 동기식으로 작성할 수 있게 한다.
+- MDN에서 `async function`이 프로미스 기반 비동기 동작을 더 깔끔하게 작성할 수 있게 한다고 설명, `await`를 통해 명시적으로 프로미스 체인을 구성할 필요가 없다고 한다.
+- 또한 `Object.values()`/`Object.entries()`, 문자열 패딩(`padStart`/`padEnd`), `Object.getOwnPropertyDescriptors()`등이 추가되어 객체 처리와 문자열 조작이 편해졌다.
+- `SharedArrayBuffer`와 `Atomics`는 웹 워커, 노드 워커 간 메모리를 공유하는 기능, 병렬 처리를 지원한다.
+
+### 2.3 ES2018: 비동기 반복, `Promise.finally()`, Rest/Spread 객체, 정규식 개선
+
+- 비동기 반복(Async iteration)을 통해 `for await ... of` 문으로 비동기 이터러블을 순회할 수 있다.
+- 데이터 스트림이나 네트워크 요청을 순차적으로 처리할 때 유용하다.
+- `Promise.prototype.finally()`는 성공 여부와 관계없이 동일한 후 처리를 실행할 수 있게 해준다.
+- 객체에서도 rest/spared 문법이 가능하고, 정규식에 lookbehind assertions, named capture groups, dotAll 플래그 등 기능이 도입되었다.
+
+### 2.4 ES2019: flat/flatMap, trim, fromEntries, 안정 정렬
