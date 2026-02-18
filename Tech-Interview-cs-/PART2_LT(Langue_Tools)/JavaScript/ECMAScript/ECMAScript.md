@@ -131,3 +131,25 @@
 - 내장 Iterator helper methods(`filter()`, `map()`, `flatMap()`, `take()`, `drop()`, `toArray()` 등)는 이터러블 데이터를 배열처럼 변환없이 처리할 수 있어, 대용량 데이터나 스트림 처리에서 유용하다.
 - `Set`에는 집합 연산 메서드(`union`, `intersection`, `difference`, `symmetricDifference`, `isSubsetOf`, `isSupersetOf`)가 추가되어 수학적 집합 연산을 직접 수행할 수 있다.
 - `RegExp.escape()`와 중복 캡쳐 그룹, 인라인 플래그를 지원, `Promise.try()`와 16비트 부동소수타입도 포함된다.
+
+---
+
+## 5. Node.js/프런트엔드 활용 팁
+
+### 5.1 Node.js: ES 모듈, top-level await, BigInt 활용
+
+- Node.js는 v12 이후 ES 모듈을 공식 지원한다. `package.json`에서 `"type": "module"`을 설정하면 `import/export` 구문을 사용할 수 있고, CommonJS와 혼용할 때 확장자와 import 경로에 주의해야 한다.
+- 서버 초기화 코드에서 top-level await을 사용하면 데이터베이스 연결과 같이 비동기 초기화를 모듈 최상위에서 처리할 수 있다.
+- BigInt는 데이터베이스 ID, 암호화 키, 시간 스탬프 등 64비트를 넘는 정수를 다루는 데 유용하다.
+- 최신 V8 엔진이 내장되어 있어 대부분의 ES2023 기능이 Node.js에서 사용할 수 있다.
+
+### 5.2 프론트엔드(불변 데이터, 옵셔널 체이닝)
+
+- ES2023 비파괴적 배열 메서드(`toReversed`, `toSorted`, `toSpliced`, `.with()`)와 ES2018의 객체 rest/spread 문법은 이러한 패턴을 간결하게 만들어 준다.
+- 옵셔널 체이닝(`?.`)과 null 병합(`??`)을 사용하면 깊은 속성 접근 시 런타임 오류를 피하고 기본값을 설정, 컴포넌트 렌더링 로직이 단순해진다.
+
+### 5.3 비동기 패턴과 스트림 처리
+
+- `async`/`await`는 네트워크 요청, 파일 I/O 등 프라미스 기반 함수 호출에서 필수적이다.
+- 스트림 데이터 처리에서 ES2018 비동기 반복(`for await ... of`)을 이용해 fetch API나 Node.js Readable Stream의 데이터를 순차적으로 소비할 수 있다.
+- ES2025 iterator helpers가 표준화되고 iterable에 직접 `map()/filter()`를 적용할 수 있어, 데이터를 배열로 변환하지 않고도 체인 형태로 작업할 수 있다.
