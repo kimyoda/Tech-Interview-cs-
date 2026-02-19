@@ -38,3 +38,41 @@
 - 이 과정에서 컴포넌트 생명주기(lifecycle) 메서드가 호출된다.
 
 ### 클래스 컴포넌트의 생명주기
+
+- 클래스 기반 컴포넌트에서 생명주기 메서드를 명시적으로 구현한다.
+  1. 마운트(Mounting): `constructor`에서 초기 state를 설정, `render()`를 호출하여 DOM에 삽입된다.
+  2. 컴포넌트가 DOM에 삽입된 : `componentDidMount()`가 호출되어 타이머 설정이나 데이터 요청 같은 초기 작업을 수행할 수 있다.
+  3. 업데이트(Updating): props 또는 state가 변경될때 마다 `render()`가 호출, DOM이 업데이트 된 후 `componentDidUpdate()`가 실행된다.
+  4. 언마운트(Unmounting): 컴포넌트가 화면에서 제거 될 때 `componentWillUnmount()`가 호출되어 리소스를 정리한다.
+
+```jsx
+class Clock extends React.Component {
+  constructor(props) {
+    super(props);
+    this.state = { date: new Date() };
+  }
+
+  componentDidMount() {
+    // 컴포넌트가 DOM에 삽입된 직후 실행
+    this.timerID = setInterval(() => this.tick(), 1000);
+  }
+
+  componentWillUnmount() {
+    // 컴포넌트가 DOM에서 제거될 때 실행
+    clearInterval(this.timerID);
+  }
+
+  tick() {
+    this.setState({ date: new Date() });
+  }
+
+  render() {
+    return (
+      <div>
+        <h1>현재 시각:</h1>
+        <h2>{this.state.date.toLocaleTimeString()}</h2>
+      </div>
+    );
+  }
+}
+```
