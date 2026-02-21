@@ -70,3 +70,124 @@ const Modal = ({ children }) => {
 ```
 
 **React 16.3(2018년 3월) - 새로운 생명주기와 Context**
+
+- **새로운 Context API**: 이전의 실험적 Context를 대체하는 공식 API
+- 생명주기 메서드 변경: `componentWillMount`, `componentWillReceiveProps`, `componentWillUpdate`가 deprecated되고, `getDerivedStateFromProps`,`getSnapshotBeforeUpdate`가 추가되었다.
+- **createRefAPI**: ref를 더 명확하게 관리할 수 있다.
+
+**React 16.6(2018년 10월) - 코드 분할과 메모이제이션**
+
+- **React.memo**: 함수형 컴포넌트의 메모이제이션을 위한 HOC
+- **React.lazy**: 동적 import를 통한 컴포넌트 지연로딩
+- **Suspense**: 비동기 컴포넌트 로딩 중 UI
+
+```jsx
+// lazy와 Suspense 예시
+const LazyComponenet = React.lazy(() => import("./LazyComponent"));
+
+function App() {
+  return (
+    <Suspense fallback={<div>로딩 중...</div>}>
+      <LazyComponent />
+    </Suspense>
+  );
+}
+```
+
+**React 16.8(2019년 2월) - Hooks 등장**
+
+- React 역사상 가장 중요한 업데이트다.
+- 함수형 컴포넌트에서 상태와 생명주기 기능을 사용할 수 있게 되었다.
+- 핵심 Hooks
+  - `useState`: 함수형 컴포넌트에 상태 추가
+  - `useEffect`: 부수 효과 처리 (생명주기를 통합)
+  - `useContext`: Context를 더 쉽게 소비한다
+  - `useReducer`: 복잡한 상태 로직 관리
+  - `useCallback`, `useMemo`: 성능 최적화
+  - `useRef`: 값 참조와 DOM 접근
+
+- Hooks의 등장으로 클래스 컴포넌트 없이 모든 React 기능을 사용할 수 있게 되었고, 로직 재사용이 쉬워졌다.
+
+```jsx
+// Hooks를 사용한 간결한 컴포넌트
+function Counter() {
+  const [count, setCount] = useState(0);
+
+  useEffect(() => {
+    document.title = `클릭 ${count}번`;
+  }, [count]);
+
+  return <button onClick={() => setCount(count + 1)}>클릭: {count}</button>;
+}
+```
+
+**React 17.x: 기반 전환 (2020)**
+
+- React 17.0(2020년 10월) - 새 기능없는 릴리즈, 점진적 업그레이드
+- **새로운 JSX Transform**: `import React from 'react'`를 매번 쓰지 않아도 된다.
+- **이벤트 위임 변경**: 이벤트가 `document`가 아닌 React루트에 연결된다.
+- **Effect 정리 타이밍 변경**: 일관성 있는 타이밍을 보장한다.
+
+**React 18.x: 동시성의 시대(2022)**
+
+- React 18.0 - 동시성 렌더링
+- React의 중요한 업데이트. 동시성(Concurrency)기능이 출시 되었다.
+- 동시성이란?
+  - React가 여러 작업을 동시에 진행하는 것처럼 보이게 만드는 것이다. 실제로는 작업을 작은 단위로 나누고, 우선순위에 따라 중단하고 재개하며 사용자 경험을 개선한다.
+
+- 핵심기능
+  1. **Automatic Batching(자동 배칭)**: 여러 상태 업데이트를 하나로 묶어 불필요한 리렌더링을 줄인다.
+
+  ```jsx
+  // React 17: 2번 렌더링
+  functionhandleClick() {
+    setCount(c => c + 1);
+    setFlag(f => !f); // 각각 리렌더링
+  }
+
+  // React 18: 1번 렌더링
+  function handleClick() {
+    setCount(c => c + 1);
+    setFlag(f => !f); // 자동 매칭
+  }
+  ```
+
+  2. **Transitions(트랜지션)**: 긴급하지 않은 업데이트를 백그라운드에서 처리한다.
+
+  ```jsx
+  import { useTransition } from 'react';
+
+  function TabContainer() {
+    const [isPending, startTransition] = useTransition();
+    const [tab, setTab] = useState('home');
+
+    function selectTab(nextTab) {
+      startTransition(() => {
+        setTab(nextTab); // 업데이트는 덜 긴급한 느낌
+      };)
+    }
+
+    return (
+      <>
+        {isePending && <Spinner />}
+        <Tabs onSelect={selectTab} />
+      </Spinner>
+    );
+  }
+  ```
+
+  3. **Suspense 개선**: 서버 사이드 렌더링에서도 Suspens를 사용할 수 있게 되었다.
+  4. 새로운 Hooks
+  - `useId`: 고유 ID 생성(SSR에서도 안전)
+  - `useTransition`: 논블로킹 업데이트
+  - `useDeferredValue`: 급하지 않은 값 지연
+  - `useSyncExternalStore`: 외부 store 구독
+  - `useInsertionEffect`: CSS-in-JS 라이브러리
+  5. **Streaming SSR**: 서버에서 HTML을 청크 단위로 보내고, 클라이언트는 반는 대로 렌더링 한다. 전체 페이지가 준비될때까지 기다리지 않아도 된다.
+
+- React18이 중요한 이유
+  - React18은 단순히 새 기능을 추가한 것이 아니라, React의 렌더링 모델 자체를 업그레이드했다.
+
+**React19: 새로운 시대의 시작 (2024)**
+
+- 2024년 12월, React19가 출시 되었다. "Actions", "Server Components", 향상된 에셋 로딩 등 기능들이 포함되어있다.
