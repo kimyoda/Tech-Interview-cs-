@@ -191,3 +191,147 @@ function Counter() {
 **React19: 새로운 시대의 시작 (2024)**
 
 - 2024년 12월, React19가 출시 되었다. "Actions", "Server Components", 향상된 에셋 로딩 등 기능들이 포함되어있다.
+
+1. Actions: 비동기 작업 업데이트
+
+- Action란
+
+* Actions는 데이터를 변경하는 비동기 함수를 다루는 새로운 방식이다.
+* 폼 제출, 데이터 뮤테이션 등에서 pending 상태, 에러, 낙관적 업데이트를 자동으로 처리한다.
+  **useTransition과 Actions**
+
+```jsx
+function UpdateName() {
+  const [name, setName] = useState("");
+  const [error, setError] = useState(null);
+  const [isPending, startTransition] = useTransition();
+
+  const handleSubmit = async () => {
+    startTransition(async () => {
+      const error = await updateName(name);
+      if (error) {
+        setError(error);
+        return;
+      }
+      // 성공 처리
+    });
+  };
+
+  return (
+    <div>
+      <input value={name} onChange={(e) => setName(e.target.value)} />
+      <button onClick={handleSubmit} disabled={isPending}>
+        {isPending ? "업데이트 중..." : "업데이트"}
+      </button>
+      {error && <p>{error}</p>}
+    </div>
+  );
+}
+```
+
+- useActionState: 폼 처리의 새로운 방법
+
+* `useFormState`로 불렀던 Hook이다. 폼의 현재 상태와 액션을 함께 관리한다.
+
+```jsx
+import { useActionState } from "react";
+
+function ChangeNameForm() {
+  const [state, submitAction, isPending] = useActionState(
+    async (previousState, formData) => {
+      const name = formData.get("name");
+      const error = await updateName(name);
+
+      if (error) {
+        return { error };
+      }
+
+      return { success: true };
+    },
+    { error: null, success: false },
+  );
+
+  return (
+    <form action={submitAction}>
+      <input type="text" name="name" />
+      <button type="submit" disabled={isPending}>
+        {isPending ? "업데이트 중..." : "이름 변경"}
+      </button>
+      {state.error && <p>에러: {state.error}</p>}
+      {state.success && <p>변경 완료!</p>}
+    </form>
+  );
+}
+```
+
+- useOptimistic: 낙관적 업데이트
+
+* 서버 응답을 기다리지 않고 UI를 즉시 업데이트하여 빠른 UX를 제공한다.
+
+```jsx
+import { useOptimistic } from "react";
+
+function Thread({ message, sendMessage }) {
+  const [optimisticMessages, addOptimisticMessage] = useOptimistic(
+    messages,
+    (state, newMessage) => [...state, { text: newMessage, sedning: true }],
+  );
+
+  const formAction = async (formData) => {
+    const message = formData.get("message");
+
+    // UI 업데이트
+    addOptimisticMessage(message);
+
+    // 서버 요청
+    await sendMessage(message);
+  };
+
+  return (
+    <div>
+      {optimisticMessages.map((msg, index) => (
+        <div key={index} style={{ opacity: msg.sending ? 0.5 : 1 }}>
+          {msg.text}
+        </div>
+      ))}
+      <form action={formAction}>
+        <input type="text" name="message" />
+        <button type="submit">전송</button>
+      </form>
+    </div>
+  );
+}
+```
+
+- useFormStatus: 폼 상태 감지
+
+* 부모 폼의 제출 상태를 자식 컴포넌트에서 읽을 수 있다.
+
+```jsx
+import { useFormStatus } from "react-dom";
+
+function SubmitButton() {
+  const { pedning, data, method } = useFormStatus();
+
+  return (
+    <button type="submit" disabled={pending}>
+      {pedning ? "제출 중..." : "제출"}
+    </button>
+  );
+}
+
+function Form() {
+  return (
+    <form action={submitForm}>
+      <input name="username" />
+      <SubmitButton />
+    </form>
+  );
+}
+```
+
+2. use API: 비동기를 더 쉽게 접근한다
+
+- useHook
+- React19에서 추가된 기능이다.
+- Promise, Context를 사용(use)할 수 있는 새로운 API이다.
