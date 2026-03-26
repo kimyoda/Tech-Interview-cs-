@@ -2,6 +2,10 @@
 
 ## Laravel 이벤트와 브로드캐스팅 개념 및 구조
 
+> **대상**: Laravel 기반 게임 API 서버에 실시간 채팅/속보 기능을 붙이려는 개발자  
+> **방향**: 코드보다 개념과 흐름을 먼저 이해하는 것이 목표  
+> **환경**: Laravel 12.x / PHP 8.2 / Laravel Reverb / Redis
+
 - 채팅과 같은 실시간 기능을 구현하려면 서버에서 발생하는 일을 클라이언트에 전달할 수 있는 구조가 필요하다.
 - PHP-Laravel은 **이벤트(Event)와 브로드캐스팅(Broadcasting)**을 통해 이런 요구사항을 수행할 수 있다.
 - Laravel 공식 Broadcasting 문서에 적혀있는 내용이다
@@ -71,3 +75,22 @@ Listener는 Event가 발생했을 때 실제로 일을 처리하는 클래스다
 `handle()` 메서드 하나가 핵심, 파라미터로 Event 객체를 받는다.
 Listener에 `ShouldQueue`를 구현하면 Queue에서 비동기로 처리된다.
 무거운 작업ㅇ은 반드시 `ShouldQueue`를 붙여야 HTTP 응답속도에 영향을 주지않는다.
+
+---
+
+#### Laravel12 - Auto-Discovery (자동 등록)
+
+Laravel 12부터 `EventServiceProvider`에 수동 등록을 하지 않아도 된다.
+`app/Listeners` 디렉토리를 자동으로 스캔, `handle()`메서드의 타입힌트를 보고 어떤 Event를 듣는지 판단한다.
+
+```php
+// 이것만 작성해도 자동으로 MessageCreated 이벤트에 등록됨
+public function handle(MessageCreated $event): void
+{
+    // ...
+}
+```
+
+---
+
+### ShouldDispatchAfterCommit - 트랜잭션 안에서 이벤트를 쓸때
