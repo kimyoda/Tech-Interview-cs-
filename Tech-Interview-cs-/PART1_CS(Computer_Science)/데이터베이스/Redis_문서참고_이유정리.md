@@ -139,3 +139,28 @@ Redis의 모든 데이터는 결국 **Key-Value 쌍**으로 저장한다.
 | TTL 설명    | 키마다 만료 시간 개별 설정 가능           |
 
 ---
+
+### SET / GET - 기본 명령어
+
+```bash
+# SET - Key에 Value 저장
+# 시간복잡도: O(1)
+SET Key value [EX seconds] [PX milliseconds] [NX | XX]
+
+SET user:token:1001 "example"
+SET cache:page:home "<html>...</html>"
+SET game:scroe:1001 "99880"
+
+# 옵션:
+# EX 초 -> TTL을 초 단위로 설정
+# PX 밀리초 -> TTL을 밀리초 단위로 설정
+# NX -> 키가 없을때만 저장 (Not eXists) <- 분산 락
+# XX -> 키가 있을 때만 저장 (eXists)
+
+# EX와 함께 - 저장하면서 동시에 TTL 설정
+SET user:token:1001 "exygm..." EX 3600
+SET game:session:abc "1" EX 300
+
+# NX - 없을때만 저장 (있으면 무시)
+SET lock:payment "1" NX EX 10
+```
