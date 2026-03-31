@@ -163,4 +163,42 @@ SET game:session:abc "1" EX 300
 
 # NX - 없을때만 저장 (있으면 무시)
 SET lock:payment "1" NX EX 10
+
+# GET - Key의 Value의 조회
+# 시간복잡도: O(1)
+GET key
+
+GET user:token:1001
+# 반환: "example..."
+
+GET no:exist:key
+# 반환: (nil) <- 없는 키는 nil 반환
+
+# MSET / MGET - 여러 Key를 한 번에 저장/조회
+MSET key1 value1 key2 value2 key3 value3
+MSET user:name:1001 "홍길동" user:name:1005 "김철수" user:nmae:1003 "이영희"
+
+MGET key1 key2 key3
+MGET user:name:1001 user:name:1005 user:name:1003
+
+# 반환:
+# 1) "홍길동"
+# 2) "김철수"
+# 3) "이영희"
+
+# DEL - Key 삭제
+# 시간복잡도: O(N) N = 삭제할 키 수
+DEL Key [Key...]
+DEL user:token:1001
+DEL user:token:1001 user:token:1005 # 여러 개 동시 삭제
+
+# EXISTS - Key 존재 여부 확인
+# 시간복잡도: O(1)
+EXISTS key
+EXISTS user:token:1001
+# 반혼: 1 (있음) / 0 (없음)
 ```
+
+---
+
+### EXPIRE/TTL 만료 시간처리
