@@ -202,3 +202,72 @@ EXISTS user:token:1001
 ---
 
 ### EXPIRE/TTL 만료 시간처리
+
+- TTL(Time To Live)는 Redis에서 **데이터를 자동으로 삭제**하는 기능이다.
+- 세션, 캐시, 임시토큰처럼 일정 시간 후 필요 없는 데이터에 반드시 설정해야 한다.
+
+```bash
+# EXPIRE - 이미 있는 Key에 TTL 설정(초 단위)
+# 시간복잡도: O(1)
+EXPIRE key seconds
+
+SET user:token:1001 "example..."
+EXPIRE user:token:1001 3600 # 1시간 자동 삭제
+
+# PEXPIRE - 밀리초 단위 TTL 설정
+PEXPIRE key milliseconds
+PEXPIRE user:token:1001 36000000 # 1시간 (밀리초))
+
+# EXPIREAT - 특정 Unix 타임스탬프에 만료 (자정 마감 유용)
+EXPIREAT key timestamp
+EXPIREAT rank:daily:3:20250325 1743004977 # 특정 시각에 정확히 만료
+
+# TTL - 남은 만료 시간 확인 (초 단위 반환)
+# 시간복잡도: O(1)
+TTL key
+
+TTL user:token:1001
+# 반환:
+# 3542 -> 남은 시간 (초)
+# -1 -> TTL 없음 (영구 보존)
+# -2 -> 키 자체가 없음
+
+# PTTL - 밀리초 단위 반환
+PTTL user:token:1001
+
+# PERSIST - TTL 제거 (영구 보존으로 전환)
+PERSIST key
+PERSIST user:token:1001 # TTL 제거 -> 영구 보존
+```
+
+TTL 설정 패턴 정리
+
+```
+만료 방식              명령어 조합                  사용 사례
+──────────────────────────────────────────────────────────────
+저장하면서 동시에 TTL   SET key value EX 초          세션·토큰·캐시
+저장 후 나중에 TTL      SET + EXPIRE                 조건부 만료
+특정 시각에 만료        SET + EXPIREAT               일간 랭킹 자정 마감
+TTL 없이 영구 보존      SET (옵션 없음)               설정값·고정 데이터
+영구 → 만료로 전환      EXPIRE                       동적 만료 처리
+만료 → 영구로 전환      PERSIST                      만료 취소
+```
+
+---
+
+### 자주 쓰는 실전 패턴
+
+패턴 1 - 캐시 (Cache)
+
+```bash
+# DB 조회 결과를 Redis에 캐시 -> 동일 요청은 Redis에 즉시 응답
+SET cache:user:1001 '{"id":1001, "name":"홍길동"}' EX 300   # 5분 캐시
+
+GET cache:user:1001
+# 있으면 -> Redis 값 바로 반환 (DB 조회 없음)
+# 없으면 -> DB 조회 후 다시 캐싱
+```
+
+---
+
+패턴 2 - 세션(Session)
