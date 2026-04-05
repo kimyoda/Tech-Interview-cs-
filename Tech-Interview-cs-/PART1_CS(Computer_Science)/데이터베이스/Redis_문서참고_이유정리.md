@@ -271,3 +271,22 @@ GET cache:user:1001
 ---
 
 패턴 2 - 세션(Session)
+
+```bash
+#로그인 시 세션 토큰 저장
+SET session:abc123xyz "1001" EX 7200
+
+# 요청마다 세션 확인
+GET session:abc123xyz
+# 반환: "1001" + 로그인된 userId
+
+# 세션 갱신 (활동할 때마다 TTL 연장)
+EXPIRE session:abc123xyz 7200
+
+# 로그아웃
+DEL session:abc123xyz
+```
+
+---
+
+패턴 3 - 중복 제출 방지 (NX 활용)
