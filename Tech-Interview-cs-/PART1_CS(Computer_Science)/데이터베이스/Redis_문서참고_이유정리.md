@@ -290,3 +290,73 @@ DEL session:abc123xyz
 ---
 
 패턴 3 - 중복 제출 방지 (NX 활용)
+
+```bash
+# NX: 키가 없을 때만 저장 -> 있으면 실패
+# 게임 세션 중복 제출 방지에 활용
+SET game:session:abc-xyz-123 "1" NX EX 3600
+# 반환 OK -> 최초 제출 (처리 진행)
+# 반환: (nil) -> 이미 존재 (중복 제출 차단))
+```
+
+---
+
+### String 명령어
+
+| 명령어                    | 용도                         | 복잡도 |
+| ------------------------- | ---------------------------- | ------ |
+| `SET key value`           | 값 저장                      | O(1)   |
+| `SET key value EX 초`     | 저장 + 만료 동시 설정        | O(1)   |
+| `SET key value NX`        | 없을때만 저장 (중복방지, 락) | O(1)   |
+| `GET key`                 | 값 조회                      | O(1)   |
+| `MSET` / `MGET`           | 여러 키 동시 저장 / 조회     | O(N)   |
+| `DEL key`                 | 키 삭제                      | O(1)   |
+| `EXISTS key`              | 키 존재 여부                 | O(1)   |
+| `EXPIRE key 초`           | TTL 설정                     | O(1)   |
+| `EXPIREAT key 타임스탬프` | 특정 시간에 만료             | O(1)   |
+| `TTL key`                 | 남은 만료 시간 확인          | O(1)   |
+| `PESIST key`              | TTL 제거 (영구보존)          | O(1)   |
+
+---
+
+### 5. ZSET(Sorted Set)
+
+Sorted Set은 **Set(집합)에 Score(점수)를 추가한 자료구조**다.
+내부적으로 SkipList + Hash Table 두가지 구조를 함께 사용한다.
+
+- SkipList: 점수 순 정렬 유지 -> 범위 조회에 빠르다
+- Hash Table: 멤버로 점수 바로 조회 -> O(1)
+
+```bash
+# ZSET의 구조
+kEY: "rank:daily:3:20250325"
+
+Score    Member(userId)
+─────────────────────────
+ 99800      "1001"      ← 1위
+ 98500      "1005"      ← 2위
+ 97000      "1003"      ← 3위
+ 85000      "1009"      ← 4위
+```
+
+### 핵심 특성
+
+| 특성             | 내용                                            |
+| ---------------- | ----------------------------------------------- |
+| 자동 정렬        | Score 기준으로 항상 오름차순 정렬 유지          |
+| 중복 Member 불가 | 같은 Member를 두 번 추가하면 Score만 업데이트   |
+| Score 범위       | 64-bit 부동소수점 (소수점 사용 가능)            |
+| 시간 복잡도      | ZADD: O(log N) / ZRANK: O(log N) / ZSCORE: O(1) |
+| 최대 Member 수   | 2^32 -1 개 (약 42억개)                          |
+
+### ZSET 주요 명령어
+
+#### 쓰기 명령어
+
+```
+# ZADD - Member 추가 및 Score 갱신
+# 시간복잡도: O(log N)
+ZADD key score member [score member ...]
+
+# 옵션
+```
