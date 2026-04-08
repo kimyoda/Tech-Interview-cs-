@@ -410,3 +410,65 @@ ZINTERSTORE result 2 rank:game1 rank:game2 # 교집합
 ---
 
 ### Sorted Sets 명령어 요약
+
+| 명령어                  | 용도                           | 복잡도       |
+| ----------------------- | ------------------------------ | ------------ |
+| `ZADD`                  | Score + Member 추가/갱신       | O(log N)     |
+| `ZADD GT`               | 최고 점수만 갱신               | O(log N)     |
+| `ZINCRBY`               | Score 누적 증가                | O(log N)     |
+| `ZSCORE`                | 특정 Member의 Score 조회       | O(1)         |
+| `ZREVRANK`              | 높은 Score 기준 순위 (1위 = 0) | O(log N)     |
+| `ZCARD`                 | 전체 Member 수                 | O(1)         |
+| `ZCOUNT`                | Score 범위 내 인원 수          | O(log N)     |
+| `ZRANGE REV WITHSCORES` | 상위 N명 조회                  | O(log N + M) |
+| `ZREM`                  | Member 삭제                    | O(log N)     |
+| `ZREMRANGEBYRANK`       | 순위 범위로 삭제               | O(log N + M) |
+| `ZUNIONSTORE`           | 합집합 저장                    | O(N log N)   |
+| `ZINTERSTORE`           | 교집합 저장                    | O(N log N)   |
+
+---
+
+## 6. Hashes - 객체 저장, 유저 정보 캐시
+
+### 개념
+
+Hash는 **하나의 Key 안에 여러 개의 Field-Value 쌍**을 저장하는 자료구조다
+RDB 테이블의 한 Row(행) 유사하고, Field 수는 40억개까지 저장 가능하다.
+
+```
+# DB 테이블 1개 Row
+user_id | nickname | avatar_url            | level
+--------|----------|-----------------------|------
+  1001  |  홍길동  | /img/avatar/1001.png  |  42
+
+# Redis Hash로 표현
+Key: "user:info:1001"
+
+Field           Value
+──────────────────────────────────
+nickname    →  "홍길동"
+avatar_url  →  "/img/avatar/1001.png"
+level       →  "42"
+```
+
+### Table, Hash 비교
+
+| 구분            | RDB Table        | Redis Hash     |
+| --------------- | ---------------- | -------------- |
+| 구조            | Column + Row     | Field + Value  |
+| PK 역할         | Primary Key      | Key            |
+| Column 역할     | Column 이름      | Field 이름     |
+| Field 수 제한   | DB에 따라 제한   | 무제한         |
+| Field 추가      | ALTER TABLE 필요 | 즉시 추가 기능 |
+| Field 영향 범위 | 테이블 전체      | 해당 Key만     |
+
+> Hash의 큰 장점 - Field 추가/삭제가 **Key에만 영향**을 마치고,
+> 사전 스키마 정의(ALTER) 없이 즉시 Field를 추가할 수 있다.
+
+---
+
+### 주요 명령어
+
+```bash
+# HSET - Field 저장/수정 (Redis 4.0부터 Field 동시 설정)
+```
