@@ -353,10 +353,60 @@ Score    Member(userId)
 
 #### 쓰기 명령어
 
-```
+```bash
 # ZADD - Member 추가 및 Score 갱신
 # 시간복잡도: O(log N)
 ZADD key score member [score member ...]
 
-# 옵션
+# 옵션:
+# NX - 새 멤버만 추가 (기존 멤버 갱신 안함)
+# XX - 기존 멤버만 갱신 (새 멤버 추가 안함)
+# GT - 기존보다 높을 때만 갱신 -> 최고점수형 랭킹에 사용
+# LT - 기존보다 낮을 때만 갱신
+ZADD rank:daily GT 100000 "1001" #최고 점수형
+
+# ZINCRBY - Score 누적 증가 (누적 점수형 랭킹)
+# 시간복잡도: O(log N)
+ZINCRBY rank:season 500 "1001" # 1001번 유저 -> 500점
+
+# ZREVRANK - 높은 Score 기준 순위 (0-based, 1위 = 0) <- 랭킹에서 주로 사용
+# 시간복잡도: O(log N)
+ZREVRANK rank:daily "1001"
+# 결과: O (1위)
+
+# ZCARD - 전체 Member 수
+# 시간복잡도: O(1)
+ZCARD rank:daily
+
+# ZCOUNT - Score 범위 내 Member 수
+# 시간복잡도: O(log N)
+ZCOUNT rank:daily 90000 99999 # 900000- 999999점 사이 인원 수
+ZCOUNT rank:daily -inf -inf # 전체 인원 수
+
+# ZRANGE - 범위 조회 (Redis 6.2에서 통합 명령어)
+# 시간복잡도: O(log N + M)
+ZRANGE rank:daily 0 9 REV WITHSCORES # 상위 10명 + 점수 포함
+ZRANGE rank:daily 0 -1 # 전체 오름차순
+ZRANGE rank:daily 0 49 REV # 상위 50명
+
+# ZREVRANGE - 높은 Score로부터 조회 (deprecated)
+ZREVRANGE rank:daily 0 9 WITHSCORES
+
+# ZRANGEBYSCORE - Score 범위로 조회 (deprecated)
+ZRANGEBYSCORE = rank:daily 900000 +inf WITHSCORES
+
+# ZREM - Member 삭제
+# 시간복잡도: O(log N)
+ZREM rank:daily "1001"
+
+# ZREMRANGEBYRANK - 순위 범위로 삭제
+ZREMRANGEBYRANK rank:daily 0 -101 # 101위 이하 전부 삭제
+
+# 집합 연산
+ZUNIONSTORE result 2 rank:game1 rank:game2 # 합집합
+ZINTERSTORE result 2 rank:game1 rank:game2 # 교집합
 ```
+
+---
+
+### Sorted Sets 명령어 요약
