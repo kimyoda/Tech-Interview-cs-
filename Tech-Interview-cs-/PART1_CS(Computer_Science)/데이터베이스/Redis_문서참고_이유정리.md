@@ -471,4 +471,52 @@ level       →  "42"
 
 ```bash
 # HSET - Field 저장/수정 (Redis 4.0부터 Field 동시 설정)
+ # 시간복잡도: O(N) N = 설정하는 Field 수
+ HSET user:info:1001 nickname "홍길동"
+ HSET user:info:1001 nickname "홍길동" avatar_url "/img/1001.png" level "42"
+
+# HGET - 단일 Field 조회
+# 시간복잡도: O(1)
+HGET user:info:1001 nickname
+
+# 결과: "홍길동"
+
+# HMGET - 여러 Field 동시 조회
+# 시간복잡도: O(N)
+HMGET user:info:1001 nickname level avatar_url
+# 결과:
+# 1) "홍길동"
+# 2) "42"
+# 3) "/img/avatar/1001.png"
+
+# HGETALL - 전체 Field-Value 쌍 조회
+# 시간복잡도: O(N)
+HGETALL user:info:1001
+# 결과:
+# 1) "nickname"     ← field
+# 2) "홍길동"       ← value
+# 3) "level"
+# 4) "42"
+# 5) "avatar_url"
+# 6) "/img/avatar/1001.png"
+
+# HKEYS / HVALS -Field 이몸만 / Value만 조회
+HKEYS user:info:1001 # nickname, level, avatar_url
+HVALS user:info:1001 # 홍길동, 42, /img/avatar/1001.png
+
+# HLEN - Field 수 조회
+# 시간복잡도: O(1)
+HLEN user:info:1001
+# 결과: 3
+
+# HEXISTS - 특정 Field 존재 여부
+# 시간복잡도: O(1)
+HEXISTS user:info:1001 nickname
+# 결과: 1 (있음)) / 0 (없음)
+
+# HDEL - 특정 Field 삭제
+# 시간복잡도: O(N)
+HDEL user:info:1001 avatar_url
+
+
 ```
