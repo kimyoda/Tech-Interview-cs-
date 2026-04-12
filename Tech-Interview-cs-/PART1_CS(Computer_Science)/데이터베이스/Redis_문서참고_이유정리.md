@@ -518,5 +518,42 @@ HEXISTS user:info:1001 nickname
 # 시간복잡도: O(N)
 HDEL user:info:1001 avatar_url
 
+# HSETNX - Field가 없을 때만 저장
+HSETNX user:info:1001 nickname "홍길동"
+
+# HINCRBY - 숫자 Field 증가/감소
+# 시간복잡도: O(1)
+HINCRBY user:info:1001 level 1 # level += 1
+HINCRBY user:info:1001 level -5 # level -= 5
+
+# HINCRBYFLOAT - 소수점 포함 증가
+HINCRBYFLOAT user:info:1001 rating 0.5
+```
+
+---
+
+**Hash, String 비교**
 
 ```
+# String으로 유저 정보 저장 - 비효율적
+SET user:nickname:1001 "홍길동"
+SET user:avatar:1001
+"img/avatar/1001.png"
+SET user:level:1001 "42"
+-> 키가 3개, 메모리 낭비, TTL 개별 관리 필요
+
+# Haash로 유저 정보 저장 - 효율적
+HSET user:info:1001 nickname "홍길동"
+avatar_url "/img/1001.png" level "42"
+-> 키가 1개, 메모리 효율적, TTL 한 번에 정리
+```
+
+---
+
+### **Hashes 명령어 요약**
+
+| 명령어  | 용도                                | 복잡도 |
+| ------- | ----------------------------------- | ------ |
+| `HSET`  | Field 저장/갱신 (여러 개 동시 가능) | O(N)   |
+| `HGET`  | 단일 Field 조회                     | O(1)   |
+| `HMGET` | 여러 Field 조회                     | O(N)   |
