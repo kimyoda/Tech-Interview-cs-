@@ -571,6 +571,12 @@ avatar_url "/img/1001.png" level "42"
 
 **타입별 대표 명령어**
 
-| 타입        | 저장(SET) | 조회(GET) | 꺼내기(POP) | 삭제 (REM) | 증가(INCR) | 집합연산 |
-| ----------- | --------- | --------- | ----------- | ---------- | ---------- | -------- |
-| **Strings** | `SET`     | `GET`     | -           | `DEL`      | `INCR`     | -        |
+| 타입        | 저장(SET) | 조회(GET)  | 꺼내기(POP) | 삭제 (REM) | 증가(INCR) | 집합연산 |
+| ----------- | --------- | ---------- | ----------- | ---------- | ---------- | -------- |
+| **Strings** | `SET`     | `GET`      | -           | `DEL`      | `INCR`     | -        |
+| **Lists**   | `LPUSH`   | `LRANGE`   | `LPOP`      | `LREM`     | ------     | ------   |
+| **Sets**    | `SADD`    | `SMEMBERS` | `SPOP`      | `SREM`     | ------     | `SUNION` |
+| **ZSets**   | `ZADD`    | `ZRANGE`   | `ZPOPMIN`   | `ZREM`     | `ZINCRBY`  | `ZUNION` |
+| **Hashes**  | `HSET`    | `HGET`     | -----       | `HDEL`     | `HINCRBY`  | -----    |
+
+**공통 Key 명령어**
