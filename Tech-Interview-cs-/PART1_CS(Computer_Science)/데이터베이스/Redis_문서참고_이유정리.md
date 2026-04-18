@@ -580,3 +580,38 @@ avatar_url "/img/1001.png" level "42"
 | **Hashes**  | `HSET`    | `HGET`     | -----       | `HDEL`     | `HINCRBY`  | -----    |
 
 **공통 Key 명령어**
+| 명령어 | 용도 | 복잡도 |
+|--------|------|--------|
+| `DEL key` | Key 삭제 | O(N) |
+| `EXISTS key` | Key 존재 여부 | O(1) |
+| `EXPIRE key 초` | TTL 설정 | O(1) |
+| `TTL key` | 남은 만료 시간 | O(1) |
+| `PERSIST key` | TTL 제거 | O(1) |
+| `TYPE key` | Key의 자료구조 타입 확인 | O(1)|
+| `KEYS pattern` | 패턴으로 Key 검색 (주의: O(N)) | O(N) |
+| `SCAN cursor` | 안전한 Key 순회 (KEYS 대체) | O(1)/회 |
+
+---
+
+## 8. Data Type 선택 기준 정리
+
+```
+자료구조 예시
+
+단순 값 저장 / 캐시 / 세션 / 중복방지
+-> Strings (SET + GET + EXPIRE)
+
+순서 있는 목록 / 큐 / 스택 최근 N개
+-> Lists (LPUSH + LRANGE + LTRIM)
+
+중복 없는 집합 / 팔로우 / 출석체크 / 태그
+-> Sets(SADD + SMEMBERS + SINTER)
+
+점수 정렬 / 순위 / 랭킹 / 리더보드
+-> Sorted Sets(ZADD + ZRANGE REV)
+
+객체 정보 캐시/ 유지 데이터 / 설정값
+-> Hashes (HSET + HGETALL)
+```
+
+### 실전 조합 패턴
