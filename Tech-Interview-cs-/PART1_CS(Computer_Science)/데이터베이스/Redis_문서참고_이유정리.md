@@ -571,6 +571,75 @@ avatar_url "/img/1001.png" level "42"
 
 **타입별 대표 명령어**
 
-| 타입        | 저장(SET) | 조회(GET) | 꺼내기(POP) | 삭제 (REM) | 증가(INCR) | 집합연산 |
-| ----------- | --------- | --------- | ----------- | ---------- | ---------- | -------- |
-| **Strings** | `SET`     | `GET`     | -           | `DEL`      | `INCR`     | -        |
+| 타입        | 저장(SET) | 조회(GET)  | 꺼내기(POP) | 삭제 (REM) | 증가(INCR) | 집합연산 |
+| ----------- | --------- | ---------- | ----------- | ---------- | ---------- | -------- |
+| **Strings** | `SET`     | `GET`      | -           | `DEL`      | `INCR`     | -        |
+| **Lists**   | `LPUSH`   | `LRANGE`   | `LPOP`      | `LREM`     | ------     | ------   |
+| **Sets**    | `SADD`    | `SMEMBERS` | `SPOP`      | `SREM`     | ------     | `SUNION` |
+| **ZSets**   | `ZADD`    | `ZRANGE`   | `ZPOPMIN`   | `ZREM`     | `ZINCRBY`  | `ZUNION` |
+| **Hashes**  | `HSET`    | `HGET`     | -----       | `HDEL`     | `HINCRBY`  | -----    |
+
+**공통 Key 명령어**
+| 명령어 | 용도 | 복잡도 |
+|--------|------|--------|
+| `DEL key` | Key 삭제 | O(N) |
+| `EXISTS key` | Key 존재 여부 | O(1) |
+| `EXPIRE key 초` | TTL 설정 | O(1) |
+| `TTL key` | 남은 만료 시간 | O(1) |
+| `PERSIST key` | TTL 제거 | O(1) |
+| `TYPE key` | Key의 자료구조 타입 확인 | O(1)|
+| `KEYS pattern` | 패턴으로 Key 검색 (주의: O(N)) | O(N) |
+| `SCAN cursor` | 안전한 Key 순회 (KEYS 대체) | O(1)/회 |
+
+---
+
+## 8. Data Type 선택 기준 정리
+
+```
+자료구조 예시
+
+단순 값 저장 / 캐시 / 세션 / 중복방지
+-> Strings (SET + GET + EXPIRE)
+
+순서 있는 목록 / 큐 / 스택 최근 N개
+-> Lists (LPUSH + LRANGE + LTRIM)
+
+중복 없는 집합 / 팔로우 / 출석체크 / 태그
+-> Sets(SADD + SMEMBERS + SINTER)
+
+점수 정렬 / 순위 / 랭킹 / 리더보드
+-> Sorted Sets(ZADD + ZRANGE REV)
+
+객체 정보 캐시/ 유지 데이터 / 설정값
+-> Hashes (HSET + HGETALL)
+```
+
+### 실전 조합 패턴
+
+```
+미니게임 랭킹 시스템:
+
+  Sorted Sets  → 점수·순위 관리 (rank:daily:game3:날짜)
+  Hashes       → 유저 정보 캐시 (user:info:userId)
+  Strings(NX)  → 중복 제출 방지 (game:session:sessionId)
+  Strings(EX)  → 세션 관리     (session:sessionId)
+
+  흐름:
+  게임 종료 → NX로 중복 방지 → ZADD로 점수 갱신
+           → ZREVRANK로 즉시 순위 확인 → 랭킹 API 응답
+```
+
+---
+
+### 핵심 한 줄 정리
+
+> 🔑 **Strings** — "값 하나 넣고, 시간 지나면 지워줘" = 캐시·세션·카운터·중복방지  
+> 🔑 **Lists** — "순서대로 쌓고, 하나씩 꺼내줘" = 큐·스택·최근 기록  
+> 🔑 **Sets** — "중복 없이 모아두고, 겹치는 거 찾아줘" = 팔로우·출석·태그  
+> 🔑 **Sorted Sets** — "점수로 자동 정렬, 순위 바로 알려줘" = 랭킹·리더보드  
+> 🔑 **Hashes** — "이 키에 여러 속성 한 번에 저장해줘" = 유저 정보·객체 캐시
+
+---
+
+_작성 기준: Redis 7.x / PHP 8.x / phpredis 확장_  
+_참고: [redisgate.kr](https://redisgate.kr/redis/introduction/redis_intro.php)_
