@@ -615,3 +615,31 @@ avatar_url "/img/1001.png" level "42"
 ```
 
 ### 실전 조합 패턴
+
+```
+미니게임 랭킹 시스템:
+
+  Sorted Sets  → 점수·순위 관리 (rank:daily:game3:날짜)
+  Hashes       → 유저 정보 캐시 (user:info:userId)
+  Strings(NX)  → 중복 제출 방지 (game:session:sessionId)
+  Strings(EX)  → 세션 관리     (session:sessionId)
+
+  흐름:
+  게임 종료 → NX로 중복 방지 → ZADD로 점수 갱신
+           → ZREVRANK로 즉시 순위 확인 → 랭킹 API 응답
+```
+
+---
+
+### 핵심 한 줄 정리
+
+> 🔑 **Strings** — "값 하나 넣고, 시간 지나면 지워줘" = 캐시·세션·카운터·중복방지  
+> 🔑 **Lists** — "순서대로 쌓고, 하나씩 꺼내줘" = 큐·스택·최근 기록  
+> 🔑 **Sets** — "중복 없이 모아두고, 겹치는 거 찾아줘" = 팔로우·출석·태그  
+> 🔑 **Sorted Sets** — "점수로 자동 정렬, 순위 바로 알려줘" = 랭킹·리더보드  
+> 🔑 **Hashes** — "이 키에 여러 속성 한 번에 저장해줘" = 유저 정보·객체 캐시
+
+---
+
+_작성 기준: Redis 7.x / PHP 8.x / phpredis 확장_  
+_참고: [redisgate.kr](https://redisgate.kr/redis/introduction/redis_intro.php)_
