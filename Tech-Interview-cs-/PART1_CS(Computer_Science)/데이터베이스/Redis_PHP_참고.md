@@ -49,4 +49,64 @@ Laravel 프로젝트에서 Redis를 쓰는 이유는
 
 ### 1. DB 부하를 줄일 수 있다
 
+유저 이름, 유저 상태, 랭킹 정보처럼 자주 읽히는 데이터를 매번 DB에서 조회하면 느리고 비효율적이다
+
+```text
+DB만 사용할 때
+요청 -> DB 조회 -> 응답
+요청 -> DB 조회 -> 응답
+요청 -> DB 조회 -> 응답
+
+Redis를 함께 사용
+요청 -> Redis 조회 -> 있으면 바로 응답
+요청 -> Redis 조회 -> 없으면 DB 조회 후 Redis 저장
+```
+
 ### 2. 응답 속도가 빨라진다
+
+Redis는 메모리 기반이라 매우 빠르다
+같은 데이터를 자주 보여주는 API일수록 Redis 효과가 크다
+
+### 3. 상태성 데이터를 다루기 좋다
+
+다음과 같은 데이터는 Redis와 잘 맞는다
+
+- 마지막 응답 캐시
+- 유저 상태 정보
+- 랭킹 점수
+- 세션
+- 중복 제출 방지용 키
+
+---
+
+## 3. Laravel에서 Redis 연결하고 사용하는 방식
+
+Laravel에서 보통 Redis Facade를 통래 Redis를 사용한다.
+
+**기본예시**
+
+```php
+use Illuminate\\Support\\Facades\\Redis;
+
+Redis::set('name', 'kim');
+$value = Redis::get('name');
+```
+
+**특정 connection 사용**
+
+```php
+public static function getUserRedis()
+{
+    return Redis::connection('user');
+}
+```
+
+해당 코드는 `database.php`에 정의된 `user` Redis connection을 가져온다
+프로젝트에서 Redis를 하나만 쓰는게 아니라 목적에 따라 connection을 나눠 사용할 수 있다.
+
+- `default` 연결
+- `cache` 연결
+- `session` 연결
+- `user` 연결
+
+### PHP에서 Redis 호출은 기본적으로 순차 실행된다
