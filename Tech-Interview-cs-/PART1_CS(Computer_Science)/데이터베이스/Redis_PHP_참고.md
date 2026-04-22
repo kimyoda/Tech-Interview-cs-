@@ -110,3 +110,35 @@ public static function getUserRedis()
 - `user` 연결
 
 ### PHP에서 Redis 호출은 기본적으로 순차 실행된다
+
+일반적으로 코드가 위에서 아래로 순서대로 실행된다
+
+```php
+$result = Redis::get('user:1001');
+$data = json_decode($result, true);
+return data;
+```
+
+Node.js처럼 `await`를 쓰는 구조는 아니고, 호출 -> 결과 반환 -> 다음 코드 실행 흐름으로 이어진다
+
+---
+
+## 4. Redis 자료구조
+
+Redis는 단순히 문자만 저장하는게 아닌 자료구조별로 최적화된 명령어를 제공한다
+
+### 1. String
+
+가장 기본적인 형태
+
+```php
+Redis::set('hello', 'world');
+$value = Redis::get('hello');
+```
+
+주로 아래와 같이 쓰인다
+
+- 캐시
+- 세션토큰
+- 마지막 응답 저장
+- 단순 상태값
