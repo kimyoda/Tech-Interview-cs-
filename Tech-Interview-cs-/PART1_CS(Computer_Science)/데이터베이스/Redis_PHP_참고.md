@@ -142,3 +142,49 @@ $value = Redis::get('hello');
 - 세션토큰
 - 마지막 응답 저장
 - 단순 상태값
+
+### 2. Hash
+
+하나의 Key 아래 여러 field-Value를 저장할 수 있다.
+
+```php
+Redis_hMSet('user_status:1001', [
+  'name' => '김요한'
+  'honor_id' => 3,
+]);
+
+$data = Redis::hGetAll('user_status:1001');
+```
+
+- 유저 프로필 일부
+- 상태 정보
+- 객체성 데이터
+
+### 3. Sorted Set(ZSet)
+
+점수가 있는 정렬된 집합이다. 랭킹 구현에 자주 쓰인다
+
+```php
+Redis::zAdd('ranking', 100, 'user:1001');
+Redis::zAdd('ranking', 200, 'user:1002');
+```
+
+- 랭킹
+- 점수판
+- 우선순위 정렬
+
+### 4. TTL(Time To Live)
+
+Redis Key는 만료 시간을 줄 수 있다
+
+```php
+Redis::set('temp:key', 'value', 'EX', 60);
+```
+
+- `EX` : 초 단위 만료 시간
+- `60` : 60초 뒤 자동 삭제
+
+TTL은 캐시 데이터에 매우 중요하다
+만료 시간이 없으면 오래된 데이터가 계속 남을 수있다.
+
+---
