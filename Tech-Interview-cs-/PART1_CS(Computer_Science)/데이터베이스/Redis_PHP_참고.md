@@ -188,3 +188,88 @@ TTL은 캐시 데이터에 매우 중요하다
 만료 시간이 없으면 오래된 데이터가 계속 남을 수있다.
 
 ---
+
+### 5. 코드 예시
+
+몇 가지 예시를 실무에 적용하는 것들을 가져왔다.
+| Key 예시 | 자료구조 | 용도 |
+|---|---|---|
+| `USER_LAST_RES_{userId}` | String | 마지막 응답 캐시 |
+| `user_status:{user_id}` | Hash | 유저 이름, 칭호 등 상태 저장 |
+| `collection_level_ranking:{id}` | ZSet | 컬렉션 랭킹 |
+| `user_collection_level_ranking` | ZSet | 전체 랭킹 |
+
+해당 프로젝트는 Redis를 다음처럼 사용한다
+
+- **String**: JSON 전체를 통째로 저장
+- **Hash**: 객체의 필드별 저장
+- **ZSet**: 점수 기반 정렬 저장
+
+---
+
+### 6. RedisService 예시
+
+Reids 관련 로직은 보통 한 곳에 모아둔다
+
+#### 6-1. key 상수 정의
+
+```php
+const USER_LAST_RESPONSE_PREFIX = 'USER_LAST_RES';
+const USER_STATUS_KEY = 'user_status:{user_id}';
+const USER_LAST_RESPONSE_TTL = 604700;
+```
+
+-> 상수로 정의해둔다
+
+- key 이름 오타를 줄일 수 있다
+- Key 규칙이 한곳에 모인다
+- 나중에 prefix 변경이 쉽다
+
+`604800` 은 초 단위로 7일이다.
+
+```
+60초 * 60분 * 24시간 * 7일 = 6048000
+```
+
+---
+
+### 6.2 Redis Connection
+
+```php
+public static function getUserRedis()
+{
+    return Redis::connection('user');
+}
+```
+
+메서드는 Redis를 클라이언트를 직접 쓰는 대신 `user` connection을 반환하는 역할
+서비스코드에서 아래처럼 재사용할 수 있다
+
+```php
+self:;getUserRedis()->get($key);
+self::getUserRedis()->hGetAll($key);
+```
+
+### 6.3 String으로 마지막 응답 저장
+
+```php
+public static function setUserLastResponse(int $userId, array $response): void
+{
+    $key = self::USER_LAST_RESPONSE_PREFIX . '_' . $userId;
+    self::setRedisData($key, json_encode($response), self::USER_LAST_RESPONSE_TTL);
+}
+```
+
+1. Key 생성
+2. 배열을 JSON 문자열 변환
+3. TTL과 함께 저장
+   데이터는 구조적으로 "객체" 실제로 Redis에 String으로 저장
+   Redis 내부에 저장된다
+
+```php
+KEY: USER_LAST_REST_1001
+VALUE: {"foo":"bar", "score":10}
+TTL: 6040800
+```
+
+### 6.4 String 데이터 읽기
