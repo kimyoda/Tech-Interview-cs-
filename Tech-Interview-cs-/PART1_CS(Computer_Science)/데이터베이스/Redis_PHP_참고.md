@@ -273,3 +273,114 @@ TTL: 6040800
 ```
 
 ### 6.4 String 데이터 읽기
+
+```php
+public static function getUserLastResponse(int $userId): array
+{
+    $key = self::USER_LAST_RESPONSE_PREFIX . '_' . $userId;
+
+    $result = self::getRedisData($key);
+
+    return $result ? jsnon_decode($result, true): [];
+}
+```
+
+여기서는 저장할 때 `json_encode()` 하여 가져올 때 `json_decode(..., true)` 로 배열로 복원한다.
+흐름은
+
+```
+PHP 배열
+-> json_encode
+-> Redis String 저장
+-> Redis GET
+-> json_decode
+-> PHP 배열 복원
+```
+
+### 6.5 Hash로 유저 상태 저장
+
+```php
+public static function setUserStatusData(UserStatus $userStatus): void
+{
+    $key = self::generateKey(self::USER_STATUS_KEY, ['user_id' => $userStatus->user_id]);
+
+    $data = [
+        'name' => $userStatus->name,
+        'honor_id' => $userStatus->honor_id,
+    ];
+
+    self::getUserRedis()->hMSet($key, $data);
+}
+```
+
+메서드는 유저 상태를 Hash로 저장한다
+실제 Redis 동작이다
+
+```
+KEY: user_status:1001
+FIELD: name => 홍길동
+FIELD: honor_id => 5
+
+```
+
+Hash를 쓰는 이유
+
+- 이름과 칭호를 필드별로 저장할 수 있다
+- 나중에 특정 필드만 가져오기 쉽다
+- JSON 전체를 매번 decode 하지 않아도 된다
+
+### 6.6 Hash 데이터 전체 조회
+
+```php
+public static function getUserStatusData(int $userId): array
+{
+    $key = self::generateKey(self::USER_STATUS_KEY, ['user_id' => $userId]);
+    return self::getUserRedis()->hGetAll($key);
+}
+```
+
+`GetAll()`은 해당 Hash의 모든 field - value를 가져온다
+밑의 형태는 예시다.
+
+```
+[
+    'name' => '홍길동',
+    'honor_id' => '5',
+]
+```
+
+주의는 Redis에서 숫자도 문자열로 오는 경우가 많아 필요하면 (int)캐스팅이 필요하다
+
+### 6.7 generateKey 의미
+
+```php
+private static function generateKey(string $template, array $replacements): string
+{
+    return Str::replace(
+        array_map(fn($k) => '{' . $k . '}', array_keys($replacements)),
+        array_values($replacements),
+        $template
+    );
+}
+```
+
+템플릿 기반 Key 생성기다.
+
+예를들어:
+
+```php
+$template = 'user_status:{user_id}';
+$pelacements = {'user_id' => 1001};
+```
+
+결과는
+
+```
+user_status:1001
+```
+
+이 방식의 장점은 Key 규칙이 일관적이라는 점이다.
+
+---
+
+## 7. PlayingPredictionService 코드 예시
