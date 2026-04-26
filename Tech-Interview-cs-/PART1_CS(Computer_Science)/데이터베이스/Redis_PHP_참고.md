@@ -384,3 +384,43 @@ user_status:1001
 ---
 
 ## 7. PlayingPredictionService 코드 예시
+
+### 7.1 DB, Redis를 함께 사용하는 구조
+
+실제 실무에서 사용했던 코드 예시를 들어봤다.
+
+1. DB에서 랭킹 목록 조회
+2. 각 유저의 상태정보는 Redis에서 조회
+3. 둘을 합쳐서 최종 응답 생성
+
+- DB: 영구 저장이 필요한 랭킹 데이터
+- Redis: 빠르게 읽고 싶은 유저 상태 데이터
+
+### 7.2 사용 예시
+
+```php
+$redis = RedisService::getUserRedis();
+
+foreach ($playingPredictionUserRankings as $playingPredictionUserRanking) {
+  $key = Str::replace(`{user_id}`,  $playingPredictionUserRanking->user_id, RedisService::USER_STATUS_KEY);
+
+  [$name, $honorId] = $redis->hMGet($key, ['name', 'honor_id']);
+
+  $rankingData = new PlayingPredictionRankingData();
+  $rankingData->userId = $playingPredictionUserRanking->user_id;
+  $rankingData->userName = $name;
+  $rankingData->honorId = (int) $honorId;
+  $rankingData->rank = $playingPredictionUserRanking->rank;
+  $rankingData->point = $playingPredictionUserRanking->total_point;
+}
+```
+
+주요 요소는 `hMGet()`이다
+`hMGet()`는 Hash에서 특정 필드만 골라서 가져온다
+
+```php
+[$name, $honorId] = $redis->hMGet($key, ['name', 'honor_id']);
+```
+
+`user_status:1001` 전체를 가져오는 게 아니라, 필요한 필드만 2개만 읽는 것이다
+-> 유저 상태 전체 중에서 name, honor_id만 바로 가져오기
