@@ -188,3 +188,239 @@ TTL은 캐시 데이터에 매우 중요하다
 만료 시간이 없으면 오래된 데이터가 계속 남을 수있다.
 
 ---
+
+### 5. 코드 예시
+
+몇 가지 예시를 실무에 적용하는 것들을 가져왔다.
+| Key 예시 | 자료구조 | 용도 |
+|---|---|---|
+| `USER_LAST_RES_{userId}` | String | 마지막 응답 캐시 |
+| `user_status:{user_id}` | Hash | 유저 이름, 칭호 등 상태 저장 |
+| `collection_level_ranking:{id}` | ZSet | 컬렉션 랭킹 |
+| `user_collection_level_ranking` | ZSet | 전체 랭킹 |
+
+해당 프로젝트는 Redis를 다음처럼 사용한다
+
+- **String**: JSON 전체를 통째로 저장
+- **Hash**: 객체의 필드별 저장
+- **ZSet**: 점수 기반 정렬 저장
+
+---
+
+### 6. RedisService 예시
+
+Reids 관련 로직은 보통 한 곳에 모아둔다
+
+#### 6-1. key 상수 정의
+
+```php
+const USER_LAST_RESPONSE_PREFIX = 'USER_LAST_RES';
+const USER_STATUS_KEY = 'user_status:{user_id}';
+const USER_LAST_RESPONSE_TTL = 604700;
+```
+
+-> 상수로 정의해둔다
+
+- key 이름 오타를 줄일 수 있다
+- Key 규칙이 한곳에 모인다
+- 나중에 prefix 변경이 쉽다
+
+`604800` 은 초 단위로 7일이다.
+
+```
+60초 * 60분 * 24시간 * 7일 = 6048000
+```
+
+---
+
+### 6.2 Redis Connection
+
+```php
+public static function getUserRedis()
+{
+    return Redis::connection('user');
+}
+```
+
+메서드는 Redis를 클라이언트를 직접 쓰는 대신 `user` connection을 반환하는 역할
+서비스코드에서 아래처럼 재사용할 수 있다
+
+```php
+self:;getUserRedis()->get($key);
+self::getUserRedis()->hGetAll($key);
+```
+
+### 6.3 String으로 마지막 응답 저장
+
+```php
+public static function setUserLastResponse(int $userId, array $response): void
+{
+    $key = self::USER_LAST_RESPONSE_PREFIX . '_' . $userId;
+    self::setRedisData($key, json_encode($response), self::USER_LAST_RESPONSE_TTL);
+}
+```
+
+1. Key 생성
+2. 배열을 JSON 문자열 변환
+3. TTL과 함께 저장
+   데이터는 구조적으로 "객체" 실제로 Redis에 String으로 저장
+   Redis 내부에 저장된다
+
+```php
+KEY: USER_LAST_REST_1001
+VALUE: {"foo":"bar", "score":10}
+TTL: 6040800
+```
+
+### 6.4 String 데이터 읽기
+
+```php
+public static function getUserLastResponse(int $userId): array
+{
+    $key = self::USER_LAST_RESPONSE_PREFIX . '_' . $userId;
+
+    $result = self::getRedisData($key);
+
+    return $result ? jsnon_decode($result, true): [];
+}
+```
+
+여기서는 저장할 때 `json_encode()` 하여 가져올 때 `json_decode(..., true)` 로 배열로 복원한다.
+흐름은
+
+```
+PHP 배열
+-> json_encode
+-> Redis String 저장
+-> Redis GET
+-> json_decode
+-> PHP 배열 복원
+```
+
+### 6.5 Hash로 유저 상태 저장
+
+```php
+public static function setUserStatusData(UserStatus $userStatus): void
+{
+    $key = self::generateKey(self::USER_STATUS_KEY, ['user_id' => $userStatus->user_id]);
+
+    $data = [
+        'name' => $userStatus->name,
+        'honor_id' => $userStatus->honor_id,
+    ];
+
+    self::getUserRedis()->hMSet($key, $data);
+}
+```
+
+메서드는 유저 상태를 Hash로 저장한다
+실제 Redis 동작이다
+
+```
+KEY: user_status:1001
+FIELD: name => 홍길동
+FIELD: honor_id => 5
+
+```
+
+Hash를 쓰는 이유
+
+- 이름과 칭호를 필드별로 저장할 수 있다
+- 나중에 특정 필드만 가져오기 쉽다
+- JSON 전체를 매번 decode 하지 않아도 된다
+
+### 6.6 Hash 데이터 전체 조회
+
+```php
+public static function getUserStatusData(int $userId): array
+{
+    $key = self::generateKey(self::USER_STATUS_KEY, ['user_id' => $userId]);
+    return self::getUserRedis()->hGetAll($key);
+}
+```
+
+`GetAll()`은 해당 Hash의 모든 field - value를 가져온다
+밑의 형태는 예시다.
+
+```
+[
+    'name' => '홍길동',
+    'honor_id' => '5',
+]
+```
+
+주의는 Redis에서 숫자도 문자열로 오는 경우가 많아 필요하면 (int)캐스팅이 필요하다
+
+### 6.7 generateKey 의미
+
+```php
+private static function generateKey(string $template, array $replacements): string
+{
+    return Str::replace(
+        array_map(fn($k) => '{' . $k . '}', array_keys($replacements)),
+        array_values($replacements),
+        $template
+    );
+}
+```
+
+템플릿 기반 Key 생성기다.
+
+예를들어:
+
+```php
+$template = 'user_status:{user_id}';
+$pelacements = {'user_id' => 1001};
+```
+
+결과는
+
+```
+user_status:1001
+```
+
+이 방식의 장점은 Key 규칙이 일관적이라는 점이다.
+
+---
+
+## 7. PlayingPredictionService 코드 예시
+
+### 7.1 DB, Redis를 함께 사용하는 구조
+
+실제 실무에서 사용했던 코드 예시를 들어봤다.
+
+1. DB에서 랭킹 목록 조회
+2. 각 유저의 상태정보는 Redis에서 조회
+3. 둘을 합쳐서 최종 응답 생성
+
+- DB: 영구 저장이 필요한 랭킹 데이터
+- Redis: 빠르게 읽고 싶은 유저 상태 데이터
+
+### 7.2 사용 예시
+
+```php
+$redis = RedisService::getUserRedis();
+
+foreach ($playingPredictionUserRankings as $playingPredictionUserRanking) {
+  $key = Str::replace(`{user_id}`,  $playingPredictionUserRanking->user_id, RedisService::USER_STATUS_KEY);
+
+  [$name, $honorId] = $redis->hMGet($key, ['name', 'honor_id']);
+
+  $rankingData = new PlayingPredictionRankingData();
+  $rankingData->userId = $playingPredictionUserRanking->user_id;
+  $rankingData->userName = $name;
+  $rankingData->honorId = (int) $honorId;
+  $rankingData->rank = $playingPredictionUserRanking->rank;
+  $rankingData->point = $playingPredictionUserRanking->total_point;
+}
+```
+
+주요 요소는 `hMGet()`이다
+`hMGet()`는 Hash에서 특정 필드만 골라서 가져온다
+
+```php
+[$name, $honorId] = $redis->hMGet($key, ['name', 'honor_id']);
+```
+
+`user_status:1001` 전체를 가져오는 게 아니라, 필요한 필드만 2개만 읽는 것이다
+-> 유저 상태 전체 중에서 name, honor_id만 바로 가져오기
