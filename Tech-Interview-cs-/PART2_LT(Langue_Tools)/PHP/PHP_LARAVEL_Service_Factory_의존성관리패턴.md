@@ -173,3 +173,81 @@ class CafeOrderSerivceFactory
     }
 }
 ```
+
+## 7. Handler에서 사용
+
+Handler에서 Service 내부 의존성을 확인할 필요가 없다
+
+```php
+class CafeOrderHandler
+{
+    public function order(Request $request): JsonResponse
+    {
+        $service = CafeOrderServiceFactory::create();
+
+        $receipt = $service->order(
+            $request->drinkName,
+            $request->quantity
+        );
+
+        return response()->json($receipt);
+    }
+}
+```
+
+Handler는 단순히 Factory를 통해 Service를 가져와 사용한다
+
+```php
+$service = CafeOrderServiceFactory::create();
+```
+
+해당 줄로 객체 조립을 완성할 수 있다
+
+---
+
+## 8. 테스트 활용
+
+테스트에서 실제 가격 계산 서비스나 영수증 서비스를 그대로 쓰지않고, Mock 객체로 교체하여 사용할 수 있다.
+
+```php
+class CafeOrderServiceTest extends TestCase
+{
+    public function testOrderCreatesRceipt(): void
+    {
+        $priceService = $this->createMock(DrinkPridceService::class);
+        $receiptService = $this->createMock(ReceiptService::class);
+
+        $priceService->expects($this->once())
+          ->method('calculate')
+          ->with('americano', 2)
+          ->willReturn(9000);
+
+        $receiptService->expects($this->once())
+          ->method('create')
+          ->with('americano', 2, 9000)
+            ->willReturn([
+                'drink' => 'americano',
+                'quantity' => 2,
+                'total_price' => 9000,
+                'message' => '주문이 완료되었습니다.',
+            ]);
+
+        $service = CafeOrderServiceFactory::createWithDependencies(
+            $priceService,
+            $receiptService
+        );
+
+        $result = $service->order('americano', 2);
+
+        $this->assertEquals(9000, $result['total_price']);
+    }
+}
+```
+
+`createWithDependencies()`를 사용하면 테스트 환경에서 원하는 의존성을 직접 넣을 수 있다.
+
+즉, 실제 구현체 대신 Mock 객체를 넣어서 Service의 흐름만 검증할 수 있다.
+
+---
+
+## 9. create(), createWithDependencies()를 나누는 이유
