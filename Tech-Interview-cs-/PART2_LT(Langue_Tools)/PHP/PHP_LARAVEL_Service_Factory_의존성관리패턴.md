@@ -31,29 +31,31 @@
 
 주문을 처리하려면 다음과 같은 작업이 필요할 것 이다.
 
-- 음료 가격 계산
-- 영수증 생성
-- 주문 자저아
+- 가입 환영 이메일 발송
+- 신규 회원 포인트 지급
+- 가입 이력 로그 기록
 
 이때 Handler나 Controller 에서 직접 객체를 생성하면 코드가 점점 복잡해진다.
 
 ```php
 // 안좋은 예시 - Handler에서 직접 객체 생성
-class CafeOrderHandler
+class UserRegisterHandler
 {
-    public function order(Request $request)
+    public function register(Request $request): JsonResponse
     {
-        $priceSerivce = new DrinklPriceSerivce();
-        $receiptService = new ReceiptService();
+        $emailService = new UserEmailService();
+        $pointService = new UserPointService();
+        $logService   = new UserRegisterLogService();
 
-        $orderSerivce = new CafeOrderService(
-            $priceService,
-            $receiptService
+        $registerService = new UserRegisterService(
+            $emailService,
+            $pointService,
+            $logService
         );
 
-        $orderSerivce->order($request->drinkName, $request->quantity);
+        $result = $registerService->register($request->userId, $request->email);
 
-        return response()->json(['ok' => true]);
+        return response()->json($result);
     }
 }
 ```
@@ -74,44 +76,51 @@ class CafeOrderHandler
 
 ## 3. 기본 구조
 
-예시는 카페 주문 서비스다
-주문 서비스는 직접 가격 계산이나 영수증 생성을 하지 않고, 각각의 하위 서비스에게 역할을 위임한다.
+**유저 회원가입 기능**을 만든다고 하자.
+
+회원가입 서비스는 직접 이메일을 보내거나, 포인트를 지급하거나, 로그를 남기지 않는다.  
+각각의 하위 서비스에게 역할을 위임한다.
 
 ---
 
 ## 4. 하위 서비스 만들기
 
-### 음료 가격 계산 서비스
+### 이메일 발송 서비스
 
 ```php
-class DrinkPriceService
+class UserEmailService
 {
-    public function calculate(string $drinkName, int $quantity): int
+    public function sendWelcome(string $email): void
     {
-        $prices = [
-            'americano' => 4500,
-            'latte' => 5000,
-            'tea' => 4000,
-        ];
-
-        return ($prices[$drinkName] ?? 0 ) * $quantity;
+        // Mail::to($email)->send(new WelcomeMail());
     }
 }
 ```
 
-### 영수증 생성 서비스
+### 포인트 지급 서비스
 
 ```php
-class ReceiptService
+class UserPointService
 {
-    public function create(string $drinkName, int $quantity, int $totalPrice)
+    private const WELCOME_POINT = 1000;
+
+    public function grantWelcomePoint(int $userId): int
     {
-        return [
-            'drink' => $drinkName,
-            'quantity' => $qantity,
-            'total_price' => $totalPrice,
-            'message' => '주문이 완료되었다',
-        ];
+        // Point::create(['user_id' => $userId, 'amount' => self::WELCOME_POINT]);
+
+        return self::WELCOME_POINT;
+    }
+}
+```
+
+### 가입 로그 기록 서비스
+
+```php
+class UserRegisterLogService
+{
+    public function record(int $userId, string $email): void
+    {
+        // RegisterLog::create(['user_id' => $userId, 'email' => $email]);
     }
 }
 ```
@@ -120,30 +129,37 @@ class ReceiptService
 
 ## 5. 메인 서비스
 
-`CafeOrderService`는 주문 흐름만 담당한다.
+`UserRegisterService`는 회원가입 흐름만 담당한다.
 
 ```php
-class CafeOrderService
+class UserRegisterService
 {
     public function __construct(
-        private readonly DrinkPriceService $priceService,
-        private readonly ReceiptService $receiptService
+        private readonly UserEmailService $emailService,
+        private readonly UserPointService $pointService,
+        private readonly UserRegisterLogService $logService
     ) {}
 
-    public function order(string $drinkName, int $quantity): array
+    public function register(int $userId, string $email): array
     {
-        $totalPrice = $this->priceService->calculate($drinkName, $quantity);
+        $this->emailService->sendWelcome($email);
 
-        return $this->receiptService->create(
-            $drinkName,
-            $quantity,
-            $totalPrice
-        );
+        $grantedPoint = $this->pointService->grantWelcomePoint($userId);
+
+        $this->logService->record($userId, $email);
+
+        return [
+            'user_id'       => $userId,
+            'email'         => $email,
+            'granted_point' => $grantedPoint,
+            'message'       => '회원가입이 완료되었습니다.',
+        ];
     }
 }
 ```
 
-여기서 포인트는 직접 `new DrinkPriceService()`를 하지 않는다는 것이다. 필요한 의존성은 생성자에서 외부로부터 주입받는다.
+여기서 포인트는 `register()` 안에서 `new UserEmailService()`를 직접 호출하지 않는다는 것이다.  
+필요한 의존성은 생성자에서 외부로부터 주입받는다.
 
 ---
 
@@ -152,23 +168,28 @@ class CafeOrderService
 Factory는 객체 생성만 담당한다.
 
 ```php
-class CafeOrderSerivceFactory
+class UserRegisterServiceFactory
 {
-    public static function create(): CafeOrderSerivce
+    // 운영 환경: 내부에서 직접 생성
+    public static function create(): UserRegisterService
     {
-        return new CafeOrderService(
-            new DrinkPriceService(),
-            new ReceiptService()
+        return new UserRegisterService(
+            new UserEmailService(),
+            new UserPointService(),
+            new UserRegisterLogService()
         );
     }
 
+    // 테스트 환경: 외부에서 의존성 주입
     public static function createWithDependencies(
-        DrinkPriceService $priceService,
-        ReceiptService $receiptService
-    ): CafeOrderService {
-        return new CafeOrderService(
-            $priceService,
-            $receiptService
+        UserEmailService $emailService,
+        UserPointService $pointService,
+        UserRegisterLogService $logService
+    ): UserRegisterService {
+        return new UserRegisterService(
+            $emailService,
+            $pointService,
+            $logService
         );
     }
 }
@@ -179,18 +200,18 @@ class CafeOrderSerivceFactory
 Handler에서 Service 내부 의존성을 확인할 필요가 없다
 
 ```php
-class CafeOrderHandler
+class UserRegisterHandler
 {
-    public function order(Request $request): JsonResponse
+    public function register(Request $request): JsonResponse
     {
-        $service = CafeOrderServiceFactory::create();
+        $service = UserRegisterServiceFactory::create();
 
-        $receipt = $service->order(
-            $request->drinkName,
-            $request->quantity
+        $result = $service->register(
+            $request->userId,
+            $request->email
         );
 
-        return response()->json($receipt);
+        return response()->json($result);
     }
 }
 ```
@@ -198,10 +219,11 @@ class CafeOrderHandler
 Handler는 단순히 Factory를 통해 Service를 가져와 사용한다
 
 ```php
-$service = CafeOrderServiceFactory::create();
+$service = UserRegisterServiceFactory::create();
 ```
 
 해당 줄로 객체 조립을 완성할 수 있다
+Handler는 `UserEmailService`, `UserPointService`, `UserRegisterLogService`의 존재를 전혀 몰라도 된다.
 
 ---
 
@@ -210,36 +232,43 @@ $service = CafeOrderServiceFactory::create();
 테스트에서 실제 가격 계산 서비스나 영수증 서비스를 그대로 쓰지않고, Mock 객체로 교체하여 사용할 수 있다.
 
 ```php
-class CafeOrderServiceTest extends TestCase
+class UserRegisterServiceTest extends TestCase
 {
-    public function testOrderCreatesRceipt(): void
+    public function testRegisterGrantsWelcomePoint(): void
     {
-        $priceService = $this->createMock(DrinkPridceService::class);
-        $receiptService = $this->createMock(ReceiptService::class);
+        $emailService = $this->createMock(UserEmailService::class);
+        $pointService = $this->createMock(UserPointService::class);
+        $logService   = $this->createMock(UserRegisterLogService::class);
 
-        $priceService->expects($this->once())
-          ->method('calculate')
-          ->with('americano', 2)
-          ->willReturn(9000);
+        // 이메일 발송이 정확히 1번 호출되는지 검증
+        $emailService
+            ->expects($this->once())
+            ->method('sendWelcome')
+            ->with('test@example.com');
 
-        $receiptService->expects($this->once())
-          ->method('create')
-          ->with('americano', 2, 9000)
-            ->willReturn([
-                'drink' => 'americano',
-                'quantity' => 2,
-                'total_price' => 9000,
-                'message' => '주문이 완료되었습니다.',
-            ]);
+        // 포인트 지급이 1번 호출되고 1000을 반환하는지 검증
+        $pointService
+            ->expects($this->once())
+            ->method('grantWelcomePoint')
+            ->with(1)
+            ->willReturn(1000);
 
-        $service = CafeOrderServiceFactory::createWithDependencies(
-            $priceService,
-            $receiptService
+        // 로그 기록이 1번 호출되는지 검증
+        $logService
+            ->expects($this->once())
+            ->method('record')
+            ->with(1, 'test@example.com');
+
+        $service = UserRegisterServiceFactory::createWithDependencies(
+            $emailService,
+            $pointService,
+            $logService
         );
 
-        $result = $service->order('americano', 2);
+        $result = $service->register(1, 'test@example.com');
 
-        $this->assertEquals(9000, $result['total_price']);
+        $this->assertEquals(1000, $result['granted_point']);
+        $this->assertEquals('회원가입이 완료되었습니다.', $result['message']);
     }
 }
 ```
@@ -251,3 +280,58 @@ class CafeOrderServiceTest extends TestCase
 ---
 
 ## 9. create(), createWithDependencies()를 나누는 이유
+
+### create()
+
+운영 코드에서 사용한다.
+
+```php
+$service = UserRegisterServiceFactory::create();
+```
+
+Factory 내부에서 실제 서비스를 생성한다. Handler는 어떤 하위 서비스가 조립되는 지 알 필요가 없다
+
+### createWithDependencies()
+
+테스트 코드에서 사용한다
+
+```php
+$service = UserRegisterServiceFactory::createWithDependencies(
+    $mockEmailService,
+    $mockPointService,
+    $mockLogService
+);
+```
+
+외부에서 원하는 의존성을 직접 주입할 수 있다.  
+실제 이메일이 발송되거나 DB에 포인트가 적립되는 일 없이, Service 흐름만 검증할 수 있다.
+
+## 10. 장점
+
+Service Factory를 사용하면 다음과 같은 장점이 있다
+
+- Handler가 단순해진다
+- 객체 생성 코드가 Factory 한곳에 모인다
+- 의존성이 바뀌어도 수정 범위가 줄어든다
+- 테스트에서 Mock 객체를 주입하기 쉽다
+- Service는 비즈니스 로직에만 집중할 수 있다
+
+---
+
+## 11. 활용은?
+
+### 사용하기 좋을 때
+
+- 하나의 Service가 여러 하위 Service를 사용할 때
+- 이메일, Redis, 외부 API처럼 테스트에서 격리가 필요한 의존성이 있을 때
+- 테스트에서 의존성을 쉽게 교체하고 싶을 때
+- 같은 Service를 여러 Handler에서 사용할 때
+
+의존성이 늘어나도 Handler 코드는 크게 바뀌지 않는다.  
+Factory에서 조립 방식만 관리하면 된다.
+
+---
+
+## 12. 요약
+
+> **Handler는 요청을 받고, Service는 로직을 처리하고, Factory는 객체를 조립한다.**
