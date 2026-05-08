@@ -123,3 +123,36 @@ Redis::connection('user')->get('user:info:1001');
 ```
 
 ---
+
+## 6. String - 기본 저장 및 조회
+
+기본이 되는 자료구조
+문자열, 숫자, JSON 문자열 모두 저장할 수 있다
+
+### 기본 명령어
+
+```bash
+# 저장
+SET user:token:1001 "eyhjg..."
+
+# TTL 포함 저장(초 단위)
+SET session:abc123 "1001" EX 7200 # 2시간 후 자동 삭제
+
+# 조회
+GET user:token:1001
+# 반환: "eyhjg:
+
+GET no:exist:key
+# 반환: (nil) <- 없는 키는 nil 반환
+
+# 삭제
+DEL user:token:1001
+
+# 존재 여부 확인
+EXISTS user:token:1001
+# 반환: 1 (있음) / 0 (없음)
+
+# 여러 키 한번에 저장 / 조회
+MSET user:name:1001 "홍길동" user:name:1002 "김철수"
+MGET user:name:1001 user:name:1002
+```
