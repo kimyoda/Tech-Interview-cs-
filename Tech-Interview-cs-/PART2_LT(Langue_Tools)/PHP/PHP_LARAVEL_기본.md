@@ -294,31 +294,128 @@ foreach ($userWithPosts->posts as $post) {
 
 ### 1-5. 🐳 Laravel Sail - "개발 환경 혁명"
 
-#### 🚀 Laravel Sail
+#### Laravel Sail 이란?
+
+- Laravel Sail = Laravel + Docker를 쉽게 사용하게 해주는 공식도구이다.
+  Laravel 프로젝트를 Docker 환경에서 실행할 수 있도록 미리 세팅된 개발 환경 패키지다.
+
+실제 사용 명령어
+
+```bash
+# Docker 컨테이너 시작 (서버 켜기)
+./vendor/bin/sail up -d
+
+# Docker 컨테이너 종료 (서버 끄기)
+./vendor/bin/sail down
+
+# Artisan 명령어 실행
+./vendor/bin/sail artisan migrate
+
+# Composer 패키지 설치
+./vendor/bin/sail composer install
+
+# NPM 명령어 실행
+./vendor/bin/sail npm run dev
+```
+
+---
+
+#### 🐳 왜 Docker를 사용하는 이유
+
+1. 모든 컴퓨터에서 가능하게 하는 환경세팅 완료
+   - docker-compose.yml - 모든 팀원이 동일한 환경 세팅한다.
 
 ```yaml
 # docker-compose.yml - 모든 팀원이 동일한 환경
 services:
   laravel.test:
-    image: sail-8.1/app
-    extra_hosts:
-      - "host.docker.internal:host-gateway"
+    image: sail-8.2/app
     environment:
-      WWWUSER: "1000"
-      LARAVEL_SAIL: 1
-    volumes:
-      - ".:/var/www/html"
-    networks:
-      - sail
-    depends_on:
-      - mysql
-      - redis
+      PHP_VERSION: "8.2"
 
   mysql:
-    image: "mysql/mysql-server:8.0"
+    image: "mysql:8.0"
     environment:
-      MYSQL_ROOT_PASSWORD: "password"
       MYSQL_DATABASE: "laravel"
-    volumes:
-      - "sail-mysql:/var/lib/mysql"
+
+  redis:
+    image: "redis:alpine"
 ```
+
+-> 팀원ㄷ를이 전부 같은 PHP, MySQL, Redis 버전 등을 사용하게 한다.
+
+---
+
+2. 복잡한 설치 과정 제거
+
+```bash
+# PHP 설치
+# MySQL 설치
+# Composer 설치
+# Node.js 설치
+# Redis 설치
+# Nginx 설정
+# PHP-FPM 설정
+# 각종 PHP Extension 설치
+```
+
+sail 방식
+
+```bash
+# 1. Laravel 프로젝트 생성
+curl -s https://laravel.build/my-project | bash
+
+# 2. 끝!
+cd my-project
+./vendor/bin/sail up
+```
+
+---
+
+3. 격리된 프로젝트 실행
+
+```bash
+cd my-work-project ./vendor/bin/sai; up
+
+cd my-work-mgmt-project ./vendor/bin/sail up
+
+-> 충돌없이 동시 개발이 가능하다.
+```
+
+---
+
+4. 운영 환경과 동일한 개발 환경
+
+```bash
+개발 환경 (내 컴퓨터)
+  └─ Docker: PHP 8.2 + MySQL 8.0 + Redis
+
+qa 개발 서버
+  └─ Docker: PHP 8.2 + MySQL 8.0 + Redis
+
+프로덕션 서버
+  └─ Docker: PHP 8.2 + MySQL 8.0 + Redis
+
+→ 모두 동일한 환경!
+→ 배포 시 예상치 못한 에러 최소화
+```
+
+---
+
+실행 과정
+
+```bash
+./vendor/bin/sail up -d
+```
+
+- 1단계: Docker 이미지 준비(PHP, MySQL, Redis 이미지 다운로드)
+
+- 2단계: 컨테이너 생성 및 실행(웹서버, 데이터베이스, 캐시)
+
+- 3단계: 네트워크 연결(sail로 모든 네퉈으크를 연결, 서로 통신이 가능)
+
+- 4단계: 볼륨 마운트(내 로컬 -> 컨테이너 내부 연결, 코드 수정 시 반영)
+
+→ 복잡한 Docker 명령어 대신 간단한 Sail 명령어
+→ 팀 전체가 동일한 환경에서 개발
+→ 설치부터 배포까지 일관된 경험
