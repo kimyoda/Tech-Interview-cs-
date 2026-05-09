@@ -156,3 +156,55 @@ EXISTS user:token:1001
 MSET user:name:1001 "홍길동" user:name:1002 "김철수"
 MGET user:name:1001 user:name:1002
 ```
+
+### TTL 관리
+
+```php
+# 이미 저장된 키에 TTL 추가
+EXPIRE user:token:1001 3600 #1시간
+
+# 남은 시간 확인
+TTL user:token:1001
+# 반환:
+# 3542 -> 남은 초
+# -1 -> TTL 없음 (영구 보존)
+# -2 -> 키 자체가 없다
+
+# TTL 제거 (영구 보존으로 전환)
+PERSIST user:token:1001
+```
+
+### Laravel 코드 에시
+
+```php
+use Illuminate\Support\Facades\Redis;
+
+// 저장
+Redis::set('user:token:1001', 'eyJhbGci...', 'EX', 3600);
+
+// 조회
+$token = Redis:get('user:token:1001');
+
+// 삭제
+Redis::del('user:token:1001');
+
+// 존재 여부
+$exists = Redis:exists('user:token:1001'); // 1 or 0
+```
+
+## 7. Hash - 객체 저장 / 조회
+
+하나의 Key안에 여러 Field-Value 쌍을 저장한다
+유저 정보처럼 **여러 속성을 묶어서 저장**할 때 한다
+
+```
+KEY: user:info:1001
+
+Field        Value
+──────────────────────
+name     →   홍길동
+level    →   42
+honor    →   5
+```
+
+### 기본 명령어
