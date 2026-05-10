@@ -259,3 +259,65 @@ $score = Redis::zScore('rank:daily:20250508', '1001');
 ## 9. 자주 쓰는 명령어 요약
 
 ### String
+
+| 명령어                | 용도           | 복잡도 |
+| --------------------- | -------------- | ------ |
+| `SET key value`       | 저장           | O(1)   |
+| `SET key value EX 초` | TTL 포함 저장  | O(1)   |
+| `SET key value NX`    | 없을 때만 저장 | O(1)   |
+| `SET key`             | 조회           | O(1)   |
+| `GET key`             | 조회           | O(1)   |
+| `DEL key`             | 삭제           | O(1)   |
+| `EXISTS key`          | 존재 여부      | O(1)   |
+| `EXPIRE key 초`       | TTL 설정       | O(1)   |
+| `TTL key`             | 남은 만료 시간 | O(1)   |
+| `PERSIST key`         | TTL 제거       | O(1)   |
+
+### Hash
+
+| 명령어                 | 용도           | 복잡도 |
+| ---------------------- | -------------- | ------ |
+| `HSET key field value` | 필드 저장      | O(N)   |
+| `HGET key field`       | 단일 필드 조회 | O(1)   |
+| `HMGET key f1 f2`      | 여러 필드 조회 | O(N)   |
+| `HGETALL key`          | 전체 조회      | O(N)   |
+| `HEXISTS key field`    | 필드 존재 여부 | O(1)   |
+| `HDEL key field`       | 필드 삭제      | O(N)   |
+
+### Sorted Set
+
+| 명령어                         | 용도                | 복잡도       |
+| ------------------------------ | ------------------- | ------------ |
+| `ZADD key score member`        | 점수 등록 / 갱신    | O(log N)     |
+| `ZADD key GT score member`     | 최고점수만 갱신     | O(log N)     |
+| `ZREVRANGE key 0 N WITHSCORES` | 상위 N명 조회       | O(log N + M) |
+| `ZREVRANK key member`          | 순위 조회 (0-based) | O(log N)     |
+| `ZCARD key`                    | 전체 멤버 수        | O(1)         |
+| `ZREM key member`              | 멤버 삭제           | O(log N)     |
+
+---
+
+## 10. 자료구조 선택 기준
+
+```
+단순 값 저장 / 캐시 / 세션 / 중복 방지
+-> String
+
+여러 속성을 가진 객체 저장 (유저 정보 등)
+-> Hash
+
+점수 기반 정렬 / 순위 / 랭킹
+-> Sorted Set
+
+순서 있는 목록 / 큐 / 최근 N개
+-> List
+
+중복 없는 집합 / 팔로우 / 출석
+-> Set
+```
+
+## 11. 핵심 한 줄 정리
+
+> **String** — "값 하나 넣고, 시간 지나면 지워줘" = 캐시 · 세션 · 중복방지
+> **Hash** — "이 키에 여러 속성 한 번에 저장해줘" = 유저 정보 · 객체 캐시
+> **Sorted Set** — "점수로 자동 정렬, 순위 바로 알려줘" = 랭킹 · 리더보드
