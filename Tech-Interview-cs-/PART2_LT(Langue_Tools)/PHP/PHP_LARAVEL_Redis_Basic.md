@@ -156,3 +156,168 @@ EXISTS user:token:1001
 MSET user:name:1001 "홍길동" user:name:1002 "김철수"
 MGET user:name:1001 user:name:1002
 ```
+
+### TTL 관리
+
+```php
+# 이미 저장된 키에 TTL 추가
+EXPIRE user:token:1001 3600 #1시간
+
+# 남은 시간 확인
+TTL user:token:1001
+# 반환:
+# 3542 -> 남은 초
+# -1 -> TTL 없음 (영구 보존)
+# -2 -> 키 자체가 없다
+
+# TTL 제거 (영구 보존으로 전환)
+PERSIST user:token:1001
+```
+
+### Laravel 코드 에시
+
+```php
+use Illuminate\Support\Facades\Redis;
+
+// 저장
+Redis::set('user:token:1001', 'eyJhbGci...', 'EX', 3600);
+
+// 조회
+$token = Redis:get('user:token:1001');
+
+// 삭제
+Redis::del('user:token:1001');
+
+// 존재 여부
+$exists = Redis:exists('user:token:1001'); // 1 or 0
+```
+
+## 7. Hash - 객체 저장 / 조회
+
+하나의 Key안에 여러 Field-Value 쌍을 저장한다
+유저 정보처럼 **여러 속성을 묶어서 저장**할 때 한다
+
+```
+KEY: user:info:1001
+
+Field        Value
+──────────────────────
+name     →   홍길동
+level    →   42
+honor    →   5
+```
+
+### 기본 명령어
+
+```bash
+# 접수 등록 / 갱신
+ZADD rank:daily:20250508 99800 "1001"
+ZAdd rank:daily:20250508 98500 "1002"
+
+# GT 옵션 - 기존보다 높을 때 갱신 (최고점수형 갱신)
+ZADD rank:daily:20250508 GT 100000 "1001"
+
+# 상위 N명 조회 (점수 높은 순)
+ZRANGE rank:daily:202508 0 9 REV WITHSCORES
+# 또는
+ZREVRANGE rank:daily:20250508 0 9 WITHSCORES
+
+# 특정 유저 순위 조회 (0-based -> +1 하면 실제 순위)
+ZREVRANK rank:daily:202508 "1001"
+# 반환: 0 -> 1위
+
+# 특정 유저 점수 조회
+ZSCORE rank:daily:20250508 "1001"
+# 반환: "99800"
+
+# 전체 멤버 수
+ZCARD rank: daily:20250508
+
+# 멤버 삭제
+ZREM rank:daily:20250508 "1001"
+```
+
+### Laravel 코드 예시
+
+```php
+// 점수 등록
+Redis::zAdd('rank:daily"20250508', 99800, '1001');
+
+// 상위 10명 조회
+$topUsers = Redis::zRevRange('rank:daily:20250508', 0, 9, 'WITHSCORES');
+
+// 특정 유저 순위
+$rank = Redis::zRevRank('rank:daily:20250508', '1001');
+$rank = $rank !== null ? $rank + 1 : 0; // 1-based 반환
+
+// 특정 유저 점수
+$score = Redis::zScore('rank:daily:20250508', '1001');
+```
+
+---
+
+## 9. 자주 쓰는 명령어 요약
+
+### String
+
+| 명령어                | 용도           | 복잡도 |
+| --------------------- | -------------- | ------ |
+| `SET key value`       | 저장           | O(1)   |
+| `SET key value EX 초` | TTL 포함 저장  | O(1)   |
+| `SET key value NX`    | 없을 때만 저장 | O(1)   |
+| `SET key`             | 조회           | O(1)   |
+| `GET key`             | 조회           | O(1)   |
+| `DEL key`             | 삭제           | O(1)   |
+| `EXISTS key`          | 존재 여부      | O(1)   |
+| `EXPIRE key 초`       | TTL 설정       | O(1)   |
+| `TTL key`             | 남은 만료 시간 | O(1)   |
+| `PERSIST key`         | TTL 제거       | O(1)   |
+
+### Hash
+
+| 명령어                 | 용도           | 복잡도 |
+| ---------------------- | -------------- | ------ |
+| `HSET key field value` | 필드 저장      | O(N)   |
+| `HGET key field`       | 단일 필드 조회 | O(1)   |
+| `HMGET key f1 f2`      | 여러 필드 조회 | O(N)   |
+| `HGETALL key`          | 전체 조회      | O(N)   |
+| `HEXISTS key field`    | 필드 존재 여부 | O(1)   |
+| `HDEL key field`       | 필드 삭제      | O(N)   |
+
+### Sorted Set
+
+| 명령어                         | 용도                | 복잡도       |
+| ------------------------------ | ------------------- | ------------ |
+| `ZADD key score member`        | 점수 등록 / 갱신    | O(log N)     |
+| `ZADD key GT score member`     | 최고점수만 갱신     | O(log N)     |
+| `ZREVRANGE key 0 N WITHSCORES` | 상위 N명 조회       | O(log N + M) |
+| `ZREVRANK key member`          | 순위 조회 (0-based) | O(log N)     |
+| `ZCARD key`                    | 전체 멤버 수        | O(1)         |
+| `ZREM key member`              | 멤버 삭제           | O(log N)     |
+
+---
+
+## 10. 자료구조 선택 기준
+
+```
+단순 값 저장 / 캐시 / 세션 / 중복 방지
+-> String
+
+여러 속성을 가진 객체 저장 (유저 정보 등)
+-> Hash
+
+점수 기반 정렬 / 순위 / 랭킹
+-> Sorted Set
+
+순서 있는 목록 / 큐 / 최근 N개
+-> List
+
+중복 없는 집합 / 팔로우 / 출석
+-> Set
+```
+
+## 11. 핵심 한 줄 정리
+
+> **String** — "값 하나 넣고, 시간 지나면 지워줘" = 캐시 · 세션 · 중복방지
+> **Hash** — "이 키에 여러 속성 한 번에 저장해줘" = 유저 정보 · 객체 캐시
+> **Sorted Set** — "점수로 자동 정렬, 순위 바로 알려줘" = 랭킹 · 리더보드
