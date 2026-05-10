@@ -208,3 +208,54 @@ honor    →   5
 ```
 
 ### 기본 명령어
+
+```bash
+# 접수 등록 / 갱신
+ZADD rank:daily:20250508 99800 "1001"
+ZAdd rank:daily:20250508 98500 "1002"
+
+# GT 옵션 - 기존보다 높을 때 갱신 (최고점수형 갱신)
+ZADD rank:daily:20250508 GT 100000 "1001"
+
+# 상위 N명 조회 (점수 높은 순)
+ZRANGE rank:daily:202508 0 9 REV WITHSCORES
+# 또는
+ZREVRANGE rank:daily:20250508 0 9 WITHSCORES
+
+# 특정 유저 순위 조회 (0-based -> +1 하면 실제 순위)
+ZREVRANK rank:daily:202508 "1001"
+# 반환: 0 -> 1위
+
+# 특정 유저 점수 조회
+ZSCORE rank:daily:20250508 "1001"
+# 반환: "99800"
+
+# 전체 멤버 수
+ZCARD rank: daily:20250508
+
+# 멤버 삭제
+ZREM rank:daily:20250508 "1001"
+```
+
+### Laravel 코드 예시
+
+```php
+// 점수 등록
+Redis::zAdd('rank:daily"20250508', 99800, '1001');
+
+// 상위 10명 조회
+$topUsers = Redis::zRevRange('rank:daily:20250508', 0, 9, 'WITHSCORES');
+
+// 특정 유저 순위
+$rank = Redis::zRevRank('rank:daily:20250508', '1001');
+$rank = $rank !== null ? $rank + 1 : 0; // 1-based 반환
+
+// 특정 유저 점수
+$score = Redis::zScore('rank:daily:20250508', '1001');
+```
+
+---
+
+## 9. 자주 쓰는 명령어 요약
+
+### String
