@@ -74,3 +74,50 @@ REPOSITORY   TAG       IMAGE ID       CREATED        SIZE
 ```
 
 이런 이미지는 보통 현재 컨테이너에서 사용하지 않는 오래된 빌드 결과물일 가능성이 높다.
+
+---
+
+### 3-3 dangling=false로 조회
+
+이번 명령어는 삭제 전에 현재 서버에 어떤 이미지들이 있는지 확인하기 위한 용도다.
+
+```bash
+docekr image ls -f "dangling=false"
+```
+
+해당 명령어를 통해 아래 내용을 확인할 수 있다
+
+```bash
+- 현재 서버에 남아 있는 이미지 목록
+- 태그가 붙어 있는 이미지 목록
+- 어떤 서비스 이미지가 존재하는지
+- 정리 전에 삭제 대상이 아닌 이미지 상태 확인
+```
+
+즉, 바로 삭제를 진행하기 전에 현재 이미지 상태를 먼저 확인한 것
+
+---
+
+## 4. docker image prune -a
+
+### 4-1. 명령어
+
+```bash
+docker image prune -a
+```
+
+### 4-2. 의미
+
+해당 명령어는 현재 컨테이너에서 사용하지 않는 Docker 이미지를 삭제한다
+중요한 옵션은 `-a` 다.
+
+```bash
+-a
+```
+
+는 `-all` 과 같은 의미다
+기존 `docker image prune` 은 dangling image만 삭제, `-a` 옵션을 붙이면 더 넓은 범위의 이미지를 삭제한다.
+
+---
+
+### 4-3. dockerr image prune과 docker image prune -a 차이
