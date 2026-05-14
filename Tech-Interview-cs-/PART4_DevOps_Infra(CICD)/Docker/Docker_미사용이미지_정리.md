@@ -209,3 +209,58 @@ docker builder prune -a
 명령어는 현재 사용하지 않는 빌드 캐시를 가능한 범위에서 전체적으로 삭제한다
 
 ### 5-4. 이미지 삭제와 빌드 캐시 삭제의 차이
+
+`docker image prune -a`와 `docker builder prune -a`는 서로 삭제 대상이 다르다
+
+| 명렁어                  | 대상                        |
+| ----------------------- | --------------------------- |
+| docker image prune -a   | 사용하지 않는 Docker 이미지 |
+| docker builder prune -a | Docker 빌드 캐시            |
+| docker container prune  | 중지된 컨테이너             |
+| docker volume prune     | 사용하지 않는 블륨          |
+| docker system prune -a  | 여러 리소스를 한 번에 정리  |
+
+이번 작업에서 이미지와 빌드캐시를 각각 정리해봤다
+
+```bash
+docker image prune -a
+# -> 사용하지 않는 이미지 삭제
+
+docker builder prune -a
+# -> 사용하지 않는 빌드 캐시 삭제
+```
+
+---
+
+## 6. 작업 흐름
+
+해당 작업 흐름은 아래와 같이 볼 수 있다.
+
+```bash
+1. 현재 Docker 이미지 목록 확인
+   docker image ls -f "dangling=false"
+
+2. 사용하지 않은 Docker 이미지 삭제
+   docker image prune -a
+
+3. Docker 빌드 캐시 삭제
+   docker builder prune -a
+```
+
+이를 운영 흐름으로 정리한다면
+
+```bash
+서버 내 Docker 이미지 상태 확인
+        ↓
+현재 컨테이너에서 사용하지 않는 이미지 정리
+        ↓
+Docker 빌드 캐시 정리
+        ↓
+디스크 용량 확보
+        ↓
+불필요한 Docker 리소스 제거 완료
+```
+
+---
+
+## 7. 삭제되는 것과 삭제되지 않는 것
