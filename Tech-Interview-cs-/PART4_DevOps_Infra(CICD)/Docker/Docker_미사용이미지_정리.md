@@ -121,3 +121,91 @@ docker image prune -a
 ---
 
 ### 4-3. dockerr image prune과 docker image prune -a 차이
+
+```bash
+docker image prune
+```
+
+위 명령어는 주로 dangling image만 삭제한다
+즉, `<none>:<none>` 형태의 이미지 위주로 제거한다
+
+```bash
+docker image prune -a
+```
+
+는 현재 실행중이거나 존재하는 컨테이너에서 사용하지 않는 모든 이미지를 삭제한다
+
+| 명렁어                 | 삭제 대상                                     | 워험도 |
+| ---------------------- | --------------------------------------------- | ------ |
+| docker image prune     | dangling image                                | 낮음   |
+| docker image prune -a  | 사용 중이지 않은 모든 이미지                  | 중간   |
+| docker system prune -a | 이미지, 컨테이너, 네트워크, 캐시 등 더 광범위 | 높다   |
+
+### 4-4. 주의
+
+`docker image prune -a`는 현재 컨테이너에서 사용하지 않는 이미지를 삭제
+실행 중인 컨테이너가 사용하는 이미지는 삭제하지 않는다
+-> 예를들어 현재는 사용하지 않으나, 나중에 롤백용으로 남겨둔 이전 버전 이미지가 있을 수 있다
+이 경우 `docker image prune -a`를 실행, 해당 롤백용 이미지도 삭제될 수 있다.
+
+```bash
+현재 실행 중인 이미지
+- app:v3
+
+서버에 남아 있는 이전 이미지
+- app:v2
+- app:v1
+
+docker image prune -a 실행 시
+- app:v2 삭제 가능
+- app:v1 삭제 가능
+- app:v3은 실행 중인 컨테이너가 사용중이면 유지
+```
+
+운영 중인 서버에서는 조심해서 작업해야 한다
+
+---
+
+## 5. docker builder prune -a
+
+### 5-1. 명령어
+
+```bash
+docker builder prune -a
+```
+
+### 5-2. 의미
+
+이 명령어는 Docker 빌드 캐시를 정리하는 명령어다.
+Docker는 이미지를 빌드 할 때 매번 처음부터 전부 빌드하지 않도록 중간 단계 결과물을 캐실 ㅗ저장한다
+Dockerfil에 아래와 같은 단계가 있다면
+
+```dockerfile
+FROM node:20
+WORKDIR /app
+COPY package.json .
+RUN npm install
+COPY . .
+RUN npm run build
+```
+
+Docker는 각 단계의 결과를 캐시로 저장한다
+다음 빌드 때 변경되지 않은 단계는 다시 실행하지 않고 캐시를 재사용한다
+빌드 속도는 빨라지지만, 오래된 캐시가 게속 쌓이면 디스크 용량을 많이 차지할 수 있다.
+
+### 5-3. docker builder prune
+
+```bash
+docker builder prune
+```
+
+사용하지 않는 빌드 캐시를 삭제한다
+여기에 `-a` 옵션을 붙이면 더 강하게 정리한다.
+
+```bash
+docker builder prune -a
+```
+
+명령어는 현재 사용하지 않는 빌드 캐시를 가능한 범위에서 전체적으로 삭제한다
+
+### 5-4. 이미지 삭제와 빌드 캐시 삭제의 차이
