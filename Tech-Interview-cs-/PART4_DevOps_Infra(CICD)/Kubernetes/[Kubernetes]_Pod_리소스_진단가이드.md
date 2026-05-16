@@ -37,3 +37,9 @@ NAME CPU(cores) MEMORY(bytes)
 | `NAME`          | Pod 이름 (ReplicaSet hash 포함)   |
 | `CPU(cores)`    | 현재 CPU 사용량. `1000m = 1 core` |
 | `MEMORY(bytes)` | 현재 RSS 메모리 사용량            |
+
+### 2-3. 어떤 점을 체크해야하나
+
+- Pod 간 CPU 편차가 크면 → 특정 Pod에 트래픽이 집중되거나, 배치성 작업이 섞여 있을 수 있음
+- 메모리가 특정 Pod에서만 높으면 → 메모리 누수 또는 캐시 비정상 증가 의심
+- 전체적으로 낮으면 → 부하 자체가 낮은 시간대일 수 있어, 피크 시간대 별도 확인 필요
