@@ -342,3 +342,75 @@ docker ps
 ```bash
 docker ps -a
 ```
+
+### 9-3. 이미지 목록 확인
+
+```bash
+docker image ls
+```
+
+### 9-4. Docker 디스크 사용량 확인
+
+```bash
+docker system df
+```
+
+### 9-5. 상세 디스크 사용량 확인
+
+```bash
+docker system df -v
+```
+
+`docker system df`는 Docker 가 이미지, 컨테이너, 볼륨, 빌드 캐시별로 어느정도 용량을 사용하는 지 확인할 수 있어 비교에 유용하다
+
+---
+
+## 10. 비교
+
+```bash
+docker system df
+```
+
+예상결과
+
+```bash
+TYPE            TOTAL     ACTIVE    SIZE      RECLAIMABLE
+Images          30        5         20GB      12GB
+Containers      5         5         500MB     0B
+Local Volumes   3         3         5GB       0B
+Build Cache     80        0         10GB      10GB
+```
+
+작업 후
+
+```bash
+docker system df
+```
+
+예상 결과
+
+```bash
+TYPE            TOTAL     ACTIVE    SIZE      RECLAIMABLE
+Images          5         5         8GB       0B
+Containers      5         5         500MB     0B
+Local Volumes   3         3         5GB       0B
+Build Cache     0         0         0B        0B
+```
+
+---
+
+## 12. 한 줄 요약
+
+이번 Docker 정리 작업은 138번 서버에서 현재 사용하지 않는 Docker 이미지와 빌드 캐시를 삭제하여 디스크 용량을 확보하는 작업이다.
+핵심 명령어는 아래와 같다.
+
+```bash
+docker image ls -f "dangling=false"
+docker image prune -a
+docker builder prune -a
+```
+
+`docker image prune -a`는 미사용 이미지를 삭제하고,
+`docker builder prune -a`는 미사용 빌드 캐시를 삭제한다.
+
+따라서 “도커 미사용 이미지 정리”는 단순 조회가 아니라, 실제로 서버에 남아 있는 불필요한 Docker 이미지와 빌드 캐시를 삭제하는 작업이라고 이해하면 된다.
