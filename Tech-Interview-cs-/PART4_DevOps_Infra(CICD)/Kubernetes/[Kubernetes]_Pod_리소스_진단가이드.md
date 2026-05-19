@@ -43,3 +43,60 @@ NAME CPU(cores) MEMORY(bytes)
 - Pod 간 CPU 편차가 크면 → 특정 Pod에 트래픽이 집중되거나, 배치성 작업이 섞여 있을 수 있음
 - 메모리가 특정 Pod에서만 높으면 → 메모리 누수 또는 캐시 비정상 증가 의심
 - 전체적으로 낮으면 → 부하 자체가 낮은 시간대일 수 있어, 피크 시간대 별도 확인 필요
+
+> `kubectl top은 metrics-server가 수집한 1~2분 평균값입니다. 순간 피크는 이 수치보다 높을 수 있습니다.
+
+---
+
+## 3. 컨테이너 단위 실사용량 확인
+
+### 3-1. 명령어
+
+```bash
+kubectl top pod -n {NAMESPACE} --containers
+
+# 출력 예시
+PDD NAME CPU(cores) MEMORY(bytes)
+{APP_NAME}-798c844b6d-56q2k       {APP_NAME}         10m          92Mi
+{APP_NAME}-798c844b6d-56q2k       {APP_NAME}-redis   2m           38Mi
+...
+
+```
+
+### 3-2. Pod 단위 vs 컨테이너 단위 값 차이
+
+Pod단위 합산 값과 컨테이너 단위 합산 값이 다를 수 있다. metrics-server의 시점 차이 때문이고 정상 범위다.
+
+### 3-3. 사이드카(Sidecar) 포함 구조에서 분석
+
+- Redis, Envoy, Datadog Agent 등 sidecar가 있는 경우 컨테이너별 분리 확인이 필수다
+- 메인 컨테이너는 여유로워도 sidecar가 메모리 한계에 근접하면 Pod 전체가 OOMKilled 될 수 있다
+- `{APP_NAME}-redis` 처럼 Redis를 sidecar로 쓸 때: `maxmemory` 설정값이 컨테이너 `memory limit`과 너무 근접하면 위험
+
+> ⚠️ **주의** Redis `maxmemory`와 컨테이너 `memory limit`을 동일하게 설정하면 Redis 프로세스 오버헤드 때문에 OOM이 발생할 수 있습니다. `maxmemory`는 limit의 약 80~85% 수준으로 여유를 두세요.
+
+---
+
+## 4. 리소스 설정값 확인 (describe pod)
+
+### 4-1. 명령어
+
+```bash
+kubectl describe pod {PDD_NAME} -n {NAMESPACE}
+
+# 또는 ReplicaSet 산하 임의의 Pod 하나를 잡고
+kubectl describe pod $(kubectl get pod -n {NAMESPACE} -1 app={APP_NAME} \ -o jsonpath='{.itmes[0].metedata.name}') -n {NAMESPACE}
+```
+
+### 4-2. 출력해서 확인해야 할 항목
+
+| 항목            | 의미                                                                       |
+| --------------- | -------------------------------------------------------------------------- |
+| `Requests`      | Kubernetes 스케줄러가 예약하는 최소 보장 리소스량                          |
+| `Limits`        | 컨테이너가 사용할 수 있는 최대치. CPU는 throttle, Memory 초과 시 OOMKilled |
+| `Restrat Count` | 0이 아니면 반복 재시작 중. 0이면 현재는 안정적                             |
+| `Events`        | OOMKilled, BackOff, Unhealthy 등 이상 이벤트 여부                          |
+| `State`         | `Running` / `CrashLoopBackOff` / `OOMKilled` 등                            |
+| `Ready`         | `True`면 readiness probe 통과 상태                                         |
+
+### 4-3. 실사용량과 설정값 비교 방법
