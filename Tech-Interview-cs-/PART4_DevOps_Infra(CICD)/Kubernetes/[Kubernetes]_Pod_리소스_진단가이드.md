@@ -100,3 +100,23 @@ kubectl describe pod $(kubectl get pod -n {NAMESPACE} -1 app={APP_NAME} \ -o jso
 | `Ready`         | `True`면 readiness probe 통과 상태                                         |
 
 ### 4-3. 실사용량과 설정값 비교 방법
+
+```bash
+# CPU 사용률 (request 대비)
+CPU 사용률 = 실제 사용량(m) / CPU request(m) * 100
+
+# Memory 사용률 (limit 대비)
+Memory 사용률 = 실제 사용량(Mi) / Memory limit(Mi) * 100
+
+# 판단 기준 (참고용)
+- CPU 사용률 > 80%  →  throttling 위험, limit 상향 또는 replica 증설 검토
+- Memory 사용률 > 80%  →  OOMKilled 위험 수준
+- CPU 사용률 < 20%  →  request 과잉 할당 가능성 (스케줄링 비효율)
+- Memory 사용률 < 20%  →  request 과잉 할당 가능성 (노드 자원 낭비)
+```
+
+> 📌 request가 너무 높으면 실제 사용량이 적어도 노드에 Pod를 더 띄울 수 없게 된다. 특히 메모리 request는 예약 기반이라 실제보다 크게 잡으면 스케줄링 효율이 떨어진다고 한다.
+
+---
+
+## 5. 노드 수준 리소스 확인
