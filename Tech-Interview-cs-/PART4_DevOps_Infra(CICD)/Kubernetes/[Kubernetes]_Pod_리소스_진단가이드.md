@@ -12,58 +12,34 @@
 
 문서는 kubectl 명령어 4가지로 아래 흐름을 따라 진단하는 방법을 설명한다
 
-### 🎯 AWS EKS 권한 및 도구세팅
-
-- macOS에서 AWS EKS 클러스터에 접속 후 컨테이너 목록을 확인하는 과정 및 권한 세팅
+① Pod/컨테이너 실사용량 확인 → ② 설정값(request/limit)과 비교 → ③ HPA 동작 상태 점검 → ④ Deployment 설정 검토
 
 ---
 
-### 📋 권한 자료 준비
+## 2. Pod별 실시간 리소스 확인
 
-1. `AWS Access Key ID`(액세스 키 ID)
-2. `AWS Secret Access Key` (비밀 액세스 키)
-3. `AWS 리전(Region) 이름`(예:`ap-asia-2)
-4. `EKS 클러스터(Cluster)이름`(예:`my-eks-cluster`)
-
-#### 💻 필수 도구 설치
-
-**AWS CLI 설치**
+### 2-1. 명령어
 
 ```bash
-# AWS CLI 설치
-brew install awscli
+kubectl top pod -n {NAMESPACE}
 
-# 설치 확인
-which aws
-
-# 버전 확인
-aws --version
+# 출력 예시
+NAME CPU(cores) MEMORY(bytes)
+{APP_NAME}-798c844b6d-56q2k       45m          143Mi
+{APP_NAME}-798c844b6d-hpj2g       112m         155Mi
+...
 ```
 
-**kubectl 설치**
+### 2-2. 출력 컬럼 읽는 법
 
-```bash
-# kubectl 설치
-brew install kubectl
+| 컬럼            | 설명                              |
+| --------------- | --------------------------------- |
+| `NAME`          | Pod 이름 (ReplicaSet hash 포함)   |
+| `CPU(cores)`    | 현재 CPU 사용량. `1000m = 1 core` |
+| `MEMORY(bytes)` | 현재 RSS 메모리 사용량            |
 
-# 설치 확인
-which kubectl
+### 2-3. 어떤 점을 체크해야하나
 
-# 버전 확인
-kubectl version --client
-```
-
-**eksctl 설치**
-
-```bash
-# kubectl 설치
-brew install eksctl
-
-# 설치 확인
-which eksctl
-
-# 버전 확인
-kubectl version
-```
-
-#### 💳 AWS CLI 설정
+- Pod 간 CPU 편차가 크면 → 특정 Pod에 트래픽이 집중되거나, 배치성 작업이 섞여 있을 수 있음
+- 메모리가 특정 Pod에서만 높으면 → 메모리 누수 또는 캐시 비정상 증가 의심
+- 전체적으로 낮으면 → 부하 자체가 낮은 시간대일 수 있어, 피크 시간대 별도 확인 필요
