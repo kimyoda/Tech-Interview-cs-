@@ -120,3 +120,60 @@ Memory 사용률 = 실제 사용량(Mi) / Memory limit(Mi) * 100
 ---
 
 ## 5. 노드 수준 리소스 확인
+
+### 5-1. 명령어
+
+```bash
+kubectl top node
+
+# 출력 예시
+NAME                  CPU(cores)   CPU(%)   MEMORY(bytes)   MEMORY(%)
+{NODE_NAME_1}         461m         12%      2985Mi          44%
+{NODE_NAME_2}         141m         7%       1414Mi          45%
+```
+
+### 5-2. 판단 기준
+
+| 지표     | 범위      | 판단                                         |
+| -------- | --------- | -------------------------------------------- |
+| CPU %    | < 50%     | 여유 있음 - 급격한 스케일업 불필요           |
+| CPU %    | 50 ~ 80 % | 모니터링 강화 필요                           |
+| CPU %    | > 80 %    | 즉시 수평 확장 검토                          |
+| Memory % | < 60%     | 여유 있음                                    |
+| Memory % | 60~80%    | request 과잉 할당 여부 재검토                |
+| Memory % | > 80%     | OOM eviction 위험, Pod 재배치 또는 노드 추가 |
+
+> **주의** 노드 Memory %가 높아도 실제 Pod 사용량이 낮은 경우, request 값이 과하게 잡혀 있을 수 있다. `kubectl top node`와 `kubectl top pod --containers`를 같이 비교.
+
+---
+
+## 6. HPA(Horizontal Pod Autoscaler) 상태 확인
+
+### 6-1. 명령어
+
+```bash
+# 현재 HPA 목록 확인
+kubectl get hpa -n {NAMESPACE}
+
+# 상세확인 (큭정 HPA)
+kubectl describe hpa {APP_NAME} -n {NAMESPACE}
+```
+
+### 6-2. get hpa 출력
+
+| 컬럼        | 의미                                               |
+| ----------- | -------------------------------------------------- |
+| `REFERENCE` | 대상 Deployment 이름                               |
+| `TARGETS`   | 현재 메트릭 값/ 목표값 (예: `45% / 50% `)          |
+| `MINPODS`   | 최소 replica 수. 부하가 낮아도 이 이하로 줄지 않음 |
+| `MAXPODS`   | 최대 replica 수. 이 이상으로 늘지 않는다           |
+| `REPLICAS`  | 현재 가동 중인 replica 수                          |
+
+### 6-3. describe hpa에서 확인
+
+- `Conditions` 항목: `AbleToScale`, `ScalingActive`, `ScalingLimited` 등 상태 확인
+- `Events` 항목: 최근에 scale up/down이 발생, 발생했는 지 이력 확인
+- 현재 replica 수 == `MINPODS`이면 -> CPU 사용률이 낮아 스케일다운하고 싶은데 min 제한에 묶여있는
+- 현재 replica 수 == `MAXPODS`이면 -> 트래픽이 많아 최대치까지 올라간 상태. limit 상향 또는 최적화 필요
+
+> 📌 Pod 수가 예상보다 많은데 사용량이 낮다면, `minReplicas` 설정을 확인. `minReplicas`가 높게 고정되어 있으면 부하가 낮아도 축소되지 않는다.
