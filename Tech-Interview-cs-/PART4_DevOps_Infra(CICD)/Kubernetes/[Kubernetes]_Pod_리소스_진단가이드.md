@@ -177,3 +177,53 @@ kubectl describe hpa {APP_NAME} -n {NAMESPACE}
 - 현재 replica 수 == `MAXPODS`이면 -> 트래픽이 많아 최대치까지 올라간 상태. limit 상향 또는 최적화 필요
 
 > 📌 Pod 수가 예상보다 많은데 사용량이 낮다면, `minReplicas` 설정을 확인. `minReplicas`가 높게 고정되어 있으면 부하가 낮아도 축소되지 않는다.
+
+---
+
+## 7. Deployment 리소스 설정 확인
+
+### 7-1 명령어
+
+```bash
+# 전체 describe 확인
+kubectl desribe deployment {APP_NAME} -n {NAMESPACE}
+
+# YAML에서 resources 블록만 추출
+kubectl get deployment {APP_NAME} -n {NAMESPACE} -o yaml \ | grep -A 30 resources
+```
+
+### 7-2. 확인 항목
+
+- `resources.requests` / `limits`가 `kubectl top` 대비 현실적인지 확인
+- `readinessProbe` / `livenessProbe` 설정 여부 — 없으면 unhealthy Pod도 트래픽 수신 가능
+- 롤링 업데이트 전략(`rollingUpdate`) — `maxSurge`, `maxUnavailable` 설정
+- sidecar 컨테이너(redis, envoy 등)의 resources도 함께 확인
+
+---
+
+## 8. 네임스페이스 전체 이벤트 확인
+
+### 8-1. 명령어
+
+```bash
+# 최근 이벤트 100개, 시간순 정렬
+kubectl get events -n {NAMESPACE} --sort-by=.lastTimestamp | tail -100
+
+# Warning만 필터
+kubectl get events -n {NAMESPACE} --field-selector type=Warning
+```
+
+### 8-2. 이상 징후 키워드
+
+| 키워드             | 의미                                                   |
+| ------------------ | ------------------------------------------------------ |
+| `OOMKilled`        | 메모리 초과로 컨테이너 강제 종료                       |
+| `BackOff`          | 컨테이너가 반복 실패 후 재시작 간격을 늘리는 중        |
+| `FailedScheduling` | 리소스 부족 또는 노드 선택 조건 미충족으로 스케줄 실패 |
+| `Evicted`          | 노드 리소스 부족으로 Pod가 강제 퇴거됨                 |
+| `Unhealthy`        | readiness 또는 liveness probe 실패                     |
+| `Killing`          | 컨테이너 종료 중 (OOM 또는 grace period 초과)          |
+
+> ⚠️ **주의** `describe pod`의 Events가 비어 있어도 namespace 전체 이벤트에는 다른 Pod의 이상이 남아 있을 수 있습니다. 두 가지를 함께 확인하세요.
+
+---
