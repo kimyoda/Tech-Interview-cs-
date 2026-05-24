@@ -93,3 +93,221 @@ export class CreateUserDto {
 ## 5. CLI 플러그인 활성화
 
 ### 5-1. nest-cli.json 설정
+
+`nest-cli.json`의 `compilerOptions.plugins`에 플러그인을 추가한다.
+
+```json
+{
+  "collection": "@nestjs/schematics",
+  "sourceRoot": "src",
+  "compilerOptions": {
+    "plugins": [
+      {
+        "name": "@nestjs/swagger",
+        "options": {
+          "classValidatorShim": true,
+          "introspectComments": true
+        }
+      }
+    ]
+  }
+}
+```
+
+### 5-2. 플러그인 옵션 전체 목록
+
+| 옵션                       | 기본값                      | 설명                                                                              |
+| -------------------------- | --------------------------- | --------------------------------------------------------------------------------- |
+| `dtoFileNameSuffix`        | `['.dto.ts', '.entity.ts']` | 플러그인이 분석할 DTO 파일 접미사                                                 |
+| `controllerFileNameSuffix` | `.controller.ts`            | 플러그인이 분석할 컨트롤러 파일 접미사                                            |
+| `classValidatorShim`       | `true`                      | `class-validator` 데코레이터를 Swagger 스키마에 반영 (예: `@Max(10)` → `max: 10`) |
+| `dtoKeyOfComment`          | `'description'`             | 주석을 `ApiProperty`의 어느 키에 매핑할지 지정                                    |
+| `controllerKeyOfComment`   | `'summary'`                 | 주석을 `ApiOperation`의 어느 키에 매핑할지 지정                                   |
+| `introspectComments`       | `false`                     | JSDoc 주석에서 설명과 예시값 자동 추출 여부                                       |
+| `skipAutoHttpCode`         | `false`                     | 컨트롤러에 `@HttpCode()` 자동 추가 비활성화 여부                                  |
+| `esmCompatible`            | `false`                     | ESM(`"type": "module"`) 환경 구문 오류 해결 여부                                  |
+
+> ⚠️ 플러그인 옵션을 변경한 뒤에는 반드시 `/dist` 폴더를 삭제하고 다시 빌드해야 새 설정이 반영된다.
+
+```bash
+rm -rf dist && npm run build
+```
+
+---
+
+## 6. 플러그인 적용 후 DTO 작성
+
+플러그인을 활성화하면 `@ApiProperty()` 없어도 타입 정의만으로 Swagger 문서가 자동 생성된다
+
+```ts
+export class CreateUserDto {
+  email: string;
+  password: string;
+  roles: RoleEnum[] = [];
+  isEnabled?: boolean = true;
+}
+```
+
+플러그인이 TypeScript 타입을 분석해 아래 항목을 자동으로 처리한다
+
+- `email: string` -> `@ApiProperty({ type: String })`
+- `isEnabled?: boolean` -> `@ApiProperty({ required: false})`
+- `roles: RoleEnum[] = []` -> `@ApiProperty({ enum: RoleEnum, isArray: true, default: [] })`
+
+> 💡 `PartialType` 같은 mapped type 유틸리티를 DTO에서 사용할 경우, `@nestjs/mapped-types`가 아닌 반드시 `@nestjs/swagger`에서 import 해야 플러그인이 스키마를 올바르게 인식한다.
+
+```ts
+// 잘못된 예
+import { PartialType } from "@nestjs/mapped-types";
+
+// 올바른 예
+import { PartialType } from "@nestjs/swagger";
+```
+
+---
+
+## 7. class-validator 함께 사용
+
+플러그인은 Swagger 문서 생성만 담당한다. 런타임 유효성 검증은 여전히 `class-validator` 데코레이터가 처리하여 함께 작성한다
+
+```ts
+import { IsEmail, IsOptional, IsEnum } from "class-validator";
+
+export enum RoleEnum {
+  ADMIN = "admin",
+  USER = "user",
+}
+
+export class CreateUserDto {
+  /**
+   * 사용자 이메일
+   * @example 'user@example.com'
+   */
+  @IsEmail()
+  email: string;
+
+  /**
+   * 사용자 비밀번호
+   * @example 'password123'
+   */
+  password: string;
+
+  /**
+   * 사용자 역할 목록
+   * @example ['admin']
+   */
+  @IsEnum(RoleEnum, { each: true })
+  roles: RoleEnum[] = [];
+
+  /**
+   * 활성화 여부
+   * @example true
+   */
+  @IsOptional()
+  isEnabled?: boolean = true;
+}
+```
+
+`classValidatorShim: true` 옵션이 켜져 있으면 `@IsEmail()`, `@IsEnum()` 같은 class-validator 데코레이터도 Swagger 스키마에 자동 반영된다.
+
+---
+
+## 8. 주석 기반 자동 설명 생성 (introspectComments)
+
+`introspectComments: true` 옵션을 활성화하면 JSDoc 주석에서 설명과 예시값을 자동으로 추출한다.
+
+### 적용 전 - 설명과 예시를 중복 작성
+
+```ts
+/**
+ * 사용자의 역할 목록
+ * @example ['admin']
+*/
+@ApiProperty({
+    description: '사용자의 역할 목록',
+    example: ['admin'],
+})
+roles: RoleEnum[] = [];
+```
+
+### 적용 후 - 주석만으로 가능
+
+```ts
+/**
+ * 사용자의 역할 목록
+ * @example ['admin']
+ */
+roles: RoleEnum[] = [];
+```
+
+### 컨트롤러에도 동일하게 적용
+
+```ts
+@Controller("users")
+export class UserController {
+  /**
+   * 사용자 생성
+   *
+   * @remarks 새로운 사용자를 생성합니다.
+   * @deprecated
+   * @throws {500} 서버 내부 오류
+   * @throws {400} 잘못된 요청
+   */
+  @Post()
+  create(@Body() createUserDto: CreateUserDto) {
+    return createUserDto;
+  }
+
+  /**
+   * 사용자 목록 조회
+   */
+  @Get()
+  findAll() {
+    return [];
+  }
+}
+```
+
+위 주석은 플러그인에 의해 아래처럼 자동 변환된다.
+
+```typescript
+@ApiOperation({
+  summary: '사용자 생성',
+  description: '새로운 사용자를 생성합니다.',
+  deprecated: true,
+})
+```
+
+---
+
+## 9. SWC 빌더 사용 시 추가 설정
+
+SWC 빌더를 사용하면 메타데이터를 별도로 생성, 로드해야 한다
+
+### 일반 프로젝트
+
+```bash
+nest start -b swc --type-check
+```
+
+### 모노레포 프로젝트
+
+```bash
+npx ts-node src/generate-metadata.ts
+
+# 또는
+npx ts-node apps/{앱이름}/src/generate-metadata.ts
+```
+
+### main.ts에 메타데이터 로드 추가
+
+```typescript
+import metadata from "./metadata"; // PluginMetadataGenerator가 자동 생성한 파일
+
+await SwaggerModule.loadPluginMetadata(metadata);
+const document = SwaggerModule.createDocument(app, config);
+```
+
+---
+
+## 10. ts-jest (e2e 테스트) 연동
