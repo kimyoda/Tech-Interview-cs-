@@ -311,3 +311,106 @@ const document = SwaggerModule.createDocument(app, config);
 ---
 
 ## 10. ts-jest (e2e 테스트) 연동
+
+`ts-jest`는 소스 파일을 메모리에서 바로 컴파일하기 때문에 Nest CLI 컴파일러를 사용하지 않아 플러그인이 적용되지 않는다. e2e 테스트 디렉토리에 아래 파일을 생성해 해결한다.
+
+### 트랜스포머 파일 생성
+
+```js
+const transformer = require("@nestjs/swagger/plugin");
+
+module.exports.name = "nestjs-swagger-transformer";
+// 설정을 변경할 때마다 version 값을 올려야 jest가 변경을 감지한다
+module.exports.version = 1;
+
+module.exports.factory = (cs) => {
+  return transformer.before(
+    {
+      // @nestjs/swagger/plugin 옵션 (비워도 됨)
+    },
+    cs.program, // Jest v27 이하에서는 cs.tsCompiler.program
+  );
+};
+```
+
+### jest 설정 파일에 트랜스포머 추가
+
+**jest@29 이상**
+
+```json
+{
+  "transform": {
+    "^.+\\.(t|j)s$": [
+      "ts-jest",
+      {
+        "astTransformers": {
+          "before": [""]
+        }
+      }
+    ]
+  }
+}
+```
+
+**jest@29 미만**
+
+```json
+{
+  "globals": {
+    "ts-jest": {
+      "astTransformers": {
+        "before": [""]
+      }
+    }
+  }
+}
+```
+
+---
+
+## 11. jest 캐시 초기화
+
+설정을 변경했는데 jest가 반영하지 않는 경우, 캐시를 초기화한다.
+
+```bash
+# 자동 캐시 초기화
+npx jest --clearCache
+```
+
+자동 초기화가 안 되는 경우 수동으로 삭제한다.
+
+```bash
+# 캐시 디렉토리 위치 확인
+npx jest --showConfig | grep cache
+
+# 캐시 디렉토리 삭제
+rm -rf
+# 예시
+rm -rf /tmp/jest_rs
+```
+
+---
+
+## 12. 주의사항 정리
+
+- 플러그인은 **Swagger 문서 생성 전용**이다. 런타임 유효성 검증은 `class-validator` 데코레이터(`@IsEmail()`, `@IsNumber()` 등)를 반드시 함께 사용해야 한다.
+- DTO 파일명은 반드시 `.dto.ts` 또는 `.entity.ts` 접미사를 가져야 플러그인이 인식한다. 다른 접미사를 쓴다면 `dtoFileNameSuffix` 옵션으로 별도 지정해야 한다.
+- 플러그인 설정 변경 후에는 반드시 `/dist` 폴더 삭제 후 재빌드해야 한다.
+- `PartialType`은 반드시 `@nestjs/swagger`에서 import 해야 한다.
+- 이 모든 설정은 **로컬 개발 및 테스트 환경** 기준이다. 운영 환경 적용 시 별도 검토가 필요하다.
+
+---
+
+## 13. 정리
+
+NestJS Swagger CLI 플러그인을 도입하면 반복적인 `@ApiProperty()` 작성에서 벗어나 타입 정의와 주석만으로 API 문서를 자동 생성할 수 있다. 특히 팀 규모가 클수록, 프로젝트가 커질수록 그 효과가 크다.
+
+코드와 문서가 항상 동기화되고, 주석을 충실히 작성하는 습관만으로 Swagger 문서 품질이 올라간다는 점에서 도입을 적극 권장한다.
+
+| 구분            | 내용                                                   |
+| --------------- | ------------------------------------------------------ |
+| 설치            | `npm install @nestjs/swagger swagger-ui-express`       |
+| 플러그인 활성화 | `nest-cli.json`의 `plugins`에 `@nestjs/swagger` 추가   |
+| 핵심 옵션       | `classValidatorShim: true`, `introspectComments: true` |
+| 주의사항        | 옵션 변경 시 `/dist` 삭제 후 재빌드 필수               |
+| 런타임 검증     | `class-validator` 데코레이터 별도 유지 필수            |
