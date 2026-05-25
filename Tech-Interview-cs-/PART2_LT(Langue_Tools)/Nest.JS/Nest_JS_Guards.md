@@ -120,3 +120,58 @@ export class RolesGuard implements CanActivate {
   }
 }
 ```
+
+```typescript
+// 컨트롤러에서 사용
+@Roles('admin')
+@UseGuards(JwtAuthGuard, RolesGuard)
+@Get('admin')
+getAdminData() {
+  return '관리자 전용 데이터';
+}
+```
+
+---
+
+## 9. Guard 적용 방법
+
+```ts
+// 핸들러 단위
+@UseGuards(AuthGuard)
+@Get('profile')
+getProfile() {}
+
+// 컨트롤러 단위
+@UseGuards(AuthGuard)
+@Controller('users')
+export class UserController {}
+
+// 전역 적용 - main.ts
+app.useGlobalGuards(new AuthGuard());
+
+// 전역 적용 - 모듈에서 DI 포함
+import { APP_GUARD } from '@nestjs/core';
+
+@Module({
+  providers: [
+    {
+      provide: APP_GUARD,
+      useClass: AuthGuard,
+    },
+  ],
+})
+export class AppModule {}
+```
+
+## 10. 정리
+
+| 항목            | 내용                                     |
+| --------------- | ---------------------------------------- |
+| 역할            | 요청을 통과시킬지 막을지 결정            |
+| 주요 용도       | 인증 / 인가                              |
+| 실행 시점       | Middleware 이후, Interceptor 이전        |
+| 핵심 인터페이스 | `CanActivate`                            |
+| 핵심 메서드     | `canActivate(context: ExecutionContext)` |
+| 적용 방법       | 핸들러 / 컨트롤러 / 전역                 |
+
+> ⚠️ Guard가 `false`를 반환하거나 예외를 던지면 컨트롤러 핸들러는 실행되지 않는다.
