@@ -114,3 +114,128 @@ export class TransformInterceptor implements NestInterceptor {
 ```
 
 ---
+
+## 6. 예외 변환 Interceptor
+
+```typescript
+import {
+  BadGatewayException,
+  CallHandler,
+  ExecutionContext,
+  Injectable,
+  NestInterceptor,
+} from "@nestjs/common";
+import { Observable, catchError, throwError } from "rxjs";
+
+@Injectable()
+export class ErrorInterceptor implements NestInterceptor {
+  intercept(context: ExecutionContext, next: CallHandler): Observable {
+    return next
+      .handle()
+      .pipe(
+        catchError((err) =>
+          throwError(
+            () => new BadGatewayException("서버 오류가 발생했습니다."),
+          ),
+        ),
+      );
+  }
+}
+```
+
+---
+
+## 7. 캐싱 Interceptor
+
+```typescript
+import {
+  CallHandler,
+  ExecutionContext,
+  Injectable,
+  NestInterceptor,
+} from "@nestjs/common";
+import { Observable, of } from "rxjs";
+
+@Injectable()
+export class CacheInterceptor implements NestInterceptor {
+  private cache = new Map();
+
+  intercept(context: ExecutionContext, next: CallHandler): Observable {
+    const request = context.switchToHttp().getRequest();
+    const key = request.url;
+
+    if (this.cache.has(key)) {
+      console.log("캐시 히트:", key);
+      return of(this.cache.get(key)); // 핸들러 실행 없이 캐시 반환
+    }
+
+    return next
+      .handle()
+      .pipe
+      // 응답을 캐시에 저장
+      // tap((data) => this.cache.set(key, data)),
+      ();
+  }
+}
+```
+
+## 8. RxJS 주요 연산자
+
+| 연산자       | 설명                                              |
+| ------------ | ------------------------------------------------- |
+| `map`        | 응답 데이터를 변환                                |
+| `tap`        | 데이터를 변환하지 않고 부수 효과만 실행 (로깅 등) |
+| `catchError` | 에러를 잡아 처리                                  |
+| `timeout`    | 일정 시간 내 응답이 없으면 에러 발생              |
+| `of`         | 특정 값을 Observable로 즉시 변환 (캐싱에 활용)    |
+
+```ts
+import { map, tap, catchError, timeout, of } from "rxjs";
+```
+
+---
+
+## 9. Interceptor 적용
+
+```ts
+// 핸들러 단위
+@UseInterceptors(LoggingInterceptor)
+@Get('profile')
+getProfile() {}
+
+// 컨트롤러 단위
+@UseInterceptors(LoggingInterceptor)
+@Controller('users')
+export class UserController {}
+
+// 전역 적용 — main.ts
+app.useGlobalInterceptors(new LoggingInterceptor());
+
+// 전역 적용 — 모듈에서 DI 포함
+import { APP_INTERCEPTOR } from '@nestjs/core';
+
+@Module({
+  providers: [
+    {
+      provide: APP_INTERCEPTOR,
+      useClass: LoggingInterceptor,
+    },
+  ],
+})
+export class AppModule {}
+```
+
+---
+
+## 10. 정리
+
+| 항목            | 내용                                            |
+| --------------- | ----------------------------------------------- |
+| 역할            | 요청 전후 로직 삽입, 응답 변환, 예외 변환, 캐싱 |
+| 실행 시점       | Guard 이후, 컨트롤러 전후                       |
+| 핵심 인터페이스 | `NestInterceptor`                               |
+| 핵심 메서드     | `intercept(context, next)`                      |
+| 핵심 개념       | `next.handle()` 호출 여부로 컨트롤러 실행 제어  |
+| RxJS 활용       | `map`, `tap`, `catchError`, `of` 등             |
+
+> ⚠️ `next.handle()`을 호출하지 않으면 컨트롤러 핸들러가 실행되지 않는다. 의도적으로 캐시를 반환할 때 활용할 수 있다.
