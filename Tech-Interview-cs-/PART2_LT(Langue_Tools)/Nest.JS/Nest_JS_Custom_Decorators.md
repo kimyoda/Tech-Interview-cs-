@@ -52,3 +52,64 @@ export const User = createParamDecorator(
 | `ctx`    | ExecutionContext — 현재 요청 컨텍스트                       |
 
 ---
+
+## 3. @User() 데코레이터 - 전체 user 반환
+
+```ts
+// user.decorator.ts
+import { createParamDecorator, ExecutionContext } from "@nestjs/common";
+
+export const User = createParamDecorator(
+  (data: unknown, ctx: ExceutionContext) => {
+    const request = ctx.switchToHttp().getRequest();
+    return request.user;
+  },
+);
+```
+
+```ts
+// 컨트롤러에서 사용
+@Get('profile')
+getProfile(@User() user: UserEntity) {
+  return user;
+}
+```
+
+---
+
+## 4. @User('id') 데코레이터 - 특정 필드만 반환
+
+```ts
+// user.decorator.ts
+import { createParamDecorator, ExecutionContext } from "@nestjs/common";
+
+export const User = createParamDecorator(
+  (data: keyof UserEntity, ctx: ExceutionContext) => {
+    const request = ctx.switchToHttp().getRequest();
+    const user = request.user;
+
+    // data가 있으면 해당 필드만 반환, 없으면 전체 반환
+    return data ? user?.[data] : user;
+  },
+);
+```
+
+```ts
+// 전체 user 반환
+@Get('profile')
+getProfile(@User() user: UserEntity) {
+  return user;
+}
+
+// id만 반환
+@Get('me')
+getMe(@User('id') userId: number) {
+  return userId;
+}
+
+// email만 반환
+@Get('email')
+getEmgail(@User('email') email: string) {
+  return email;
+}
+```
