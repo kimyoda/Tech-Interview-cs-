@@ -164,3 +164,89 @@ return next.handle().pipe(
 ---
 
 ### 3-7. Exception Filter
+
+```ts
+@Catch(HttpException)
+export class HttpExceptionFilter implements ExceptionFilter {
+  catch(exception: HttpException, host: ArgumentsHost) {
+    const ctx = host.switchToHttp();
+    const response = ctx.getResponse();
+    const status = exception.getStatus();
+
+    response.status(status).json({
+      success: false,
+      statusCode: status,
+      message: exception.message,
+    });
+  }
+}
+```
+
+- 예외가 발생했을 때 동작
+- 예외를 잡아 클라이언트에 적절한 응답으로 변환
+
+---
+
+## 4. 전역 / 컨트롤러 / 라우트 레벨 순서
+
+NestJS에서 동일한 컴포넌트가 여러 레벨에 적용되어 실행 순서는 아래와 같다
+
+### Guard 실행 순서
+
+```
+전역 Guard -> 컨트롤러 Guard -> 라우트 Guard
+```
+
+### Interceptor 실행 순서 (요청 전)
+
+```
+전역 Interceptor -> 컨트롤러 Interceptor -> 라우트 Interceptor
+```
+
+### Interceptor 실행 순서 (응답 후)
+
+```
+라우트 Interceptor -> 컨트롤러 Interceptor -> 전역 Interceptor
+```
+
+응답 후 처리는 요청 전 처리의 **역순**으로 실행된다
+
+### Pipe 실행
+
+```
+전역 Pipe -> 컨트롤러 Pipe -> 라우트 Pipe -> 파라미터 Pipe
+```
+
+### Exception Filter 실행 순서
+
+```
+라우트 Filter -> 컨트롤러 Filter -> 전역 Filter
+```
+
+예외 필터는 **가장 가까운 레벨**부터 처리한다
+
+---
+
+## 5. 저체 흐름 예시 - 회원 조회 API
+
+```
+GET /user/1 요청 -> Authorization: Bearer {token}
+
+1. Middleware - 요청 로깅: [GET] / users/1
+2. Guard - JwtAuthGuard: 토큰 검증 -> request.user 세팅
+3. Interceptor 전 - 타이머 시작, 요청 로깅
+4. Pipe           — ParseIntPipe: '1' → 1 (숫자 변환)
+5. Controller     — findOne(1) 호출
+6. Service        — DB에서 id=1 유저 조회
+7. Interceptor 후 — 응답을 { success: true, data: {...} } 형태로 변환
+8. Response       — 200 OK 응답 전송
+```
+
+예외 발생 시:
+
+```
+4. Pipe    — 'abc' 입력 → ParseIntPipe가 BadRequestException 던짐
+8. Filter  — HttpExceptionFilter가 잡아 { success: false, statusCode: 400 } 응답 반환
+```
+
+---
