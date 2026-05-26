@@ -132,3 +132,36 @@ Handler는 API 요청의 진입점 역할을 한다
 ---
 
 ## 7. Service Layer 규칙
+
+비지니스 로직은 `app/Services` 하위에 작성한다
+도메인별로 디렉터리를 나누어 관리한다. 예시는 다음과 같다
+
+```text
+app/
+└── Services/
+    ├── Mini/
+    ├── Ranking/
+    ├── CheeringRanking/
+    └── Master/
+```
+
+### Service Layer 역할
+
+Service에 실제 비즈니스 로직을 담당한다
+
+다음과 같은 처리를 Service에 수행한다
+
+- 유저 데이터 조회
+- 점수 계산
+- 랭킹 등록
+- 보상 지급
+- 구매 가능 여부 검증
+- 마스터 데이터 조회
+- Redis 캐시 조회
+- DB 저장 및 갱신
+
+---
+
+## 8. 의존성 주입 DI 규칙
+
+Service Layer에 의존성 주입을 적극 활용한다.
