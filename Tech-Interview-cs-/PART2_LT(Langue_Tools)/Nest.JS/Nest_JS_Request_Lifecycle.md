@@ -250,3 +250,61 @@ GET /user/1 요청 -> Authorization: Bearer {token}
 ```
 
 ---
+
+## 6. 전역 적용 정리
+
+```ts
+// main.ts
+async function bootstrap() {
+  const app = await NestFactory.create(AppModule);
+
+  app.use(LoggerMiddleware); // Middleware
+  app.useGlobalGuards(new AuthGuard()); // Guard
+  app.useGlobalInterceptors(new LoggingInterceptor()); // Interceptor
+  app.useGlobalPipes(new ValidationPipe()); // Pipe
+  app.useGlobalFilters(new HttpExceptionFilter()); // Exception Filter
+
+  await app.listen(3000);
+}
+```
+
+---
+
+## 7. 컴포넌트별 인터페이스 정리
+
+| 컴포넌트         | 인터페이스        | 핵심 메서드                  |
+| ---------------- | ----------------- | ---------------------------- |
+| Middleware       | `NestMiddleware`  | `use(req, res, next)`        |
+| Guard            | `CanActivate`     | `canActivate(context)`       |
+| Interceptor      | `NestInterceptor` | `intercept(context, next)`   |
+| Pipe             | `PipeTransform`   | `transform(value, metadata)` |
+| Exception Filter | `ExceptionFilter` | `catch(exception, host)`     |
+
+---
+
+## 8. 정리
+
+```
+Middleware
+  -> 요청 전처리, 공동 로직, next() 호출 필수
+
+Guard
+  -> 인증 / 인가 판단, canActivate() 반환 값으로 통과 여부 결정
+
+Interceptor (전)
+  -> 핸들러 실행 전 로직, next.handle() 호출 전
+
+Pipe
+  ->  입력값 변환 / 유효성 검사
+
+Controller -> Service
+  -> 라우팅 및 비지니스 로직 처리
+
+Interceptor (후)
+  -> 응답 변환, 캐싱, 로깅 - 요청 전 처리의 역순
+
+Exception Filter
+  -> 예외 발생 시만 동작, 가까운 것부터 처리
+```
+
+> 💡 이 흐름을 이해하면 어디서 로직을 처리해야 할지, 왜 특정 컴포넌트가 그 위치에 있는지 명확하게 알 수 있다. 면접에서도 이 순서를 그릴 수 있으면 NestJS 이해도를 확실히 보여줄 수 있다.
