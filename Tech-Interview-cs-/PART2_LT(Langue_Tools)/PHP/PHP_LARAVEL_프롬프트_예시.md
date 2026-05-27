@@ -165,3 +165,173 @@ Service에 실제 비즈니스 로직을 담당한다
 ## 8. 의존성 주입 DI 규칙
 
 Service Layer에 의존성 주입을 적극 활용한다.
+
+테스트하기 쉬운 구조를 만든다.
+
+Handler가 직접 모델이나 Redis를 다루기보다 Service를 주입받아 처리 흐름을 위이만다
+
+### 구조 에시
+
+```text
+Handler
+  ↓
+Service
+  ↓
+Repository / Model / Redis / MasterSerivce
+```
+
+해당 구조를 사용하면 다음 장점이 있다
+
+- Handler가 얇아짐
+- 비지니스 로직 재사용 가능
+- 테스트 코드 작성이 쉬워진다
+- Mock 처리 가능
+- 책임 분리가 명확해진다
+
+---
+
+## 9. Strict Typing & Modern PHP 규칙
+
+PHP 8.3 문법을 기준으로 엄격한 탕입 사용을 권장한다
+
+### 기본 규칙
+
+- 파라미터 타입 명시
+- 리턴 타입 명시
+- 가능하면 `readonly` 프로퍼티 사용
+- 가능하면 생성자 홍보 문법 사용
+- 불필요한 동적 프로퍼티 사용 지망
+- 배열 구조가 복잡한 경우 Struct 사용 고려
+
+### 권장 방향
+
+```text
+명확한 타입
+명확한 책임
+명확한 응답 구조
+테스트 가능한 설계
+```
+
+---
+
+## 10. Structs & Response 규칙
+
+응답 객체는 `BaseResponse`를 상속받는다
+
+데이터 구조체는 `BaseStruct`를 상속받는다
+
+### Response 규칙
+
+```text
+App\Responses\{Domain}\{Name}Response
+```
+
+응답 객체는 API 응답의 최상위 구조를 담당한다
+
+### Struct 규칙
+
+```text
+App\Structs\{Domain}\{Name}Data
+```
+
+Struct는 응답 내부의 세부 데이터 구조를 담당한다
+
+---
+
+## 11. Camle Case / Snake Case 반환 규칙
+
+`BaseResponse`와 `BaseStruct`는 내부적으로 카멜케이스 프로퍼티를 응답 시 스네이크케이스 키로 자동 변환한다.
+PHP 클래스 내부에서 카멜케이스를 사용한다
+
+### 클래스 내부
+
+```text
+buyPlayCountData
+```
+
+### 실제 API 응답
+
+```text
+buy_play_count_data
+```
+
+개발자는 PHP 코드에서 카멜케이스를 유지, 클라이언트 응답에서 스네이크케이스로 내려가는 구조이다.
+
+---
+
+## 12. Exception Handling 규칙
+
+비즈니스 로직 오류는 기본 Exception을 직접 사용하지 ㅇ낳고 프로젝트 공통 예외 클래스를 사용한다
+
+### 사용 클래스
+
+```text
+App\Exceptions\CustomException
+App\Enums\ErrorCode
+```
+
+### 사용 목적
+
+- 에러 코드 일관성 유지
+- 클라이언트 응답 코드 통일
+- 운영 및 QA 단계에서 오류 추적 용이
+- API 문서와 에러 코드 목록 동기화
+
+---
+
+## 13. Logging 규칙
+
+유저 액션 로그는 다음 Helper를 사용한다
+
+```text
+pp\Helpers\UserLogger
+```
+
+### 로그 기록 대상 예시
+
+- 미니게임 플레이 시작
+- 미니게임 결과 저장
+- 보상 지급
+- 아이템 구매
+- 교환소 사용
+- 랭킹 등록
+- 주요 콘텐츠 진입
+
+로그는 추후 CS, 운영툴, 장애 분석, 유저 이슈 확인에 활용될 수 있으므로 중요한 유저 액션에 반드시 기록 여부를 검토한다
+
+---
+
+## 14. 데이터베이스 규칙
+
+해당 프로젝트는 여러 DB connection을 사용한다
+
+주요 연결은 다음과 같다
+
+| Connection | 용도          |
+| ---------- | ------------- |
+| user       | 유저 데이터   |
+| ranking    | 랭킹 데이터   |
+| manage     | 운영툴 데이터 |
+| master     | 마스터 데이터 |
+
+모델을 작성할 때는 반드시 `$connection`을 설정을 확인해야 한다.
+
+---
+
+## 15. Model Connection 규칙
+
+Multi-Connection 구조에서는 모델이 어떤 DB에 연결되는지가 매우 중요합니다.
+
+유저 데이터 모델은 `user` connection을 사용, 랭킹 데이터 모델은 `ranking` connection을 사용해야 한다
+
+잘못된 connection을 사용할 경우 다음 문제가 발생할 수 있다
+
+- 테이블을 찾지 못한다
+- 다른 DB에 데이터가 저장된다
+- 테스트 환경에서 Transction이 적용되지 않는다
+- 운영 데이터와 테스트 데이터가 섞인다
+- 조회 결과가 예상과 다르게 나온다
+
+---
+
+## 16. Migration 규칙
