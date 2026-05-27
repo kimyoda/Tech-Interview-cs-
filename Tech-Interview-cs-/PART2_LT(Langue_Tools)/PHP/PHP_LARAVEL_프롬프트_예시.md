@@ -239,3 +239,99 @@ Struct는 응답 내부의 세부 데이터 구조를 담당한다
 ---
 
 ## 11. Camle Case / Snake Case 반환 규칙
+
+`BaseResponse`와 `BaseStruct`는 내부적으로 카멜케이스 프로퍼티를 응답 시 스네이크케이스 키로 자동 변환한다.
+PHP 클래스 내부에서 카멜케이스를 사용한다
+
+### 클래스 내부
+
+```text
+buyPlayCountData
+```
+
+### 실제 API 응답
+
+```text
+buy_play_count_data
+```
+
+개발자는 PHP 코드에서 카멜케이스를 유지, 클라이언트 응답에서 스네이크케이스로 내려가는 구조이다.
+
+---
+
+## 12. Exception Handling 규칙
+
+비즈니스 로직 오류는 기본 Exception을 직접 사용하지 ㅇ낳고 프로젝트 공통 예외 클래스를 사용한다
+
+### 사용 클래스
+
+```text
+App\Exceptions\CustomException
+App\Enums\ErrorCode
+```
+
+### 사용 목적
+
+- 에러 코드 일관성 유지
+- 클라이언트 응답 코드 통일
+- 운영 및 QA 단계에서 오류 추적 용이
+- API 문서와 에러 코드 목록 동기화
+
+---
+
+## 13. Logging 규칙
+
+유저 액션 로그는 다음 Helper를 사용한다
+
+```text
+pp\Helpers\UserLogger
+```
+
+### 로그 기록 대상 예시
+
+- 미니게임 플레이 시작
+- 미니게임 결과 저장
+- 보상 지급
+- 아이템 구매
+- 교환소 사용
+- 랭킹 등록
+- 주요 콘텐츠 진입
+
+로그는 추후 CS, 운영툴, 장애 분석, 유저 이슈 확인에 활용될 수 있으므로 중요한 유저 액션에 반드시 기록 여부를 검토한다
+
+---
+
+## 14. 데이터베이스 규칙
+
+해당 프로젝트는 여러 DB connection을 사용한다
+
+주요 연결은 다음과 같다
+
+| Connection | 용도          |
+| ---------- | ------------- |
+| user       | 유저 데이터   |
+| ranking    | 랭킹 데이터   |
+| manage     | 운영툴 데이터 |
+| master     | 마스터 데이터 |
+
+모델을 작성할 때는 반드시 `$connection`을 설정을 확인해야 한다.
+
+---
+
+## 15. Model Connection 규칙
+
+Multi-Connection 구조에서는 모델이 어떤 DB에 연결되는지가 매우 중요합니다.
+
+유저 데이터 모델은 `user` connection을 사용, 랭킹 데이터 모델은 `ranking` connection을 사용해야 한다
+
+잘못된 connection을 사용할 경우 다음 문제가 발생할 수 있다
+
+- 테이블을 찾지 못한다
+- 다른 DB에 데이터가 저장된다
+- 테스트 환경에서 Transction이 적용되지 않는다
+- 운영 데이터와 테스트 데이터가 섞인다
+- 조회 결과가 예상과 다르게 나온다
+
+---
+
+## 16. Migration 규칙
