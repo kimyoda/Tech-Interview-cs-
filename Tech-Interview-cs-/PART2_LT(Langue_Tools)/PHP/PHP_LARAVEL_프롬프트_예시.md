@@ -477,3 +477,89 @@ API 목록은 다음 파일에서 관리합니다.
 ---
 
 ## 24. 공통 객체 문서
+
+공통 객체는 다른 파일에 정리한다
+
+```text
+00_common_object.md
+```
+
+여러 API에서 반복적으로 사용하는 객체는 개별 API 문서마다 중복 작성하지 않고 공통 객체 문서에 정의한다
+
+---
+
+## 25. 응답 코드 및 오류 코드 문서
+
+응답 코드와 오류 코드는 다음 파일에 정리한다
+
+```text
+00_result_code_list.md
+```
+
+기준이 되는 코드는 다음 파일이다.
+
+즉, 에러코드에 정의된 내용을 기준으로 문서의 오류 코드 목록도 함께 관리해야 한다.
+
+---
+
+## 26. 전에 요청 처리 흐름
+
+일반적인 API 요청 흐름은 다음과 같다
+
+```text
+Unity Client
+  ↓
+Laravel Route / API Entry
+  ↓
+Protocol Resolver
+  ↓
+Protocol Handler
+  ↓
+Service Layer
+  ↓
+Model / Redis / MasterService
+  ↓
+Response /Struct
+  ↓
+Unity Client
+```
+
+---
+
+## 27. 개발 시 체크리스트
+
+### Handler 작성 시
+
+- URI 규칙에 맞는 namespace인지 확인
+- `ProtocolBase`를 상속했는 지 확인
+- `handle(RequestCommon $commonRequest, array $request)`를 구현했는 지 확인
+- 비즈니스 로직이 Handler에 과도하게 들어가지 않았는 지 확인
+- Response 객체를 사용했는 지 확인
+
+### Service 작성 시
+
+- `app/Services/{Domain}` 하위에 위치하는 지 확인
+- 의존성 주입이 가능한 구조인지 확인
+- 테스트 가능한 단위로 분리되어 있는지 확인
+- DB, Redis, MasterService 접근 책임이 명확한지 확인
+
+### Model 작성 시
+
+- `$connection`이 올바른지 확인
+- 테이블명이 명확인지 확인
+- Multi-Connection 환경에서 잘못된 DB를 바라보지 않는 지 확인
+
+### 테스트 작성 시
+
+- `./vendor/bin/sail` 명령어로 실행하는 지 확인
+- 필요한 connection이 `$connectionToTransact`에 포함되어 있는 지 확인
+- fixture가 최신인지 확인
+- 테스트 데이터의 DB connection이 올바른지 확인
+
+### 문서 작성 시
+
+- `00_api_template.md` 기준으로 작성했는지 확인
+- 파일명이 `[컨텐츠명]_[핸들러명].md` 형식인지 확인
+- `00_api_list.md`에 추가했는지 확인
+- 공통 객체는 `00_common_object.md`에 정리했는지 확인
+- 오류 코드는 `00_result_code_list.md`에 반영했는지 확인
