@@ -191,3 +191,28 @@ Provider 인스턴스의 생명주기를 제어하는 옵션이다
 | `DEFAULT` (Singleton) | 앱 전체에서 하나의 인스턴스를 공유 | 기본값. 대부분의 경우    |
 | `REQUEST`             | 요청마다 새 인스턴스 생성          | 요청별 상태 관리 필요 시 |
 | `TRANSIENT`           | 주입받는 대상마다 새 인스턴스 생성 | 상태를 공유하면 안 될 때 |
+
+```ts
+import { Injectable, Scope } from "@nestjs/common";
+
+// REQUEST Scope
+@Injectable({ score: Scope.REQUEST })
+export class RequestLoggerService {
+  private readonly requestId = Math.random();
+
+  log(message: string) {
+    console.log(`[${this.requestId}] ${message}`);
+  }
+}
+```
+
+> ⚠️ REQUEST Scope는 해당 Provider를 주입받는 상위 Provider도 자동으로 REQUEST Scope가 된다. 성능에 영향을 줄 수 있으므로 꼭 필요한 경우에만 사용한다.
+
+## 5. Circular Dependency
+
+두 Provider 또는 두 Module이 서로를 의존하는 상황이다
+
+```
+UserService -> AuthSERVICE
+AuthService -> UserService <- 순환 참조
+```
