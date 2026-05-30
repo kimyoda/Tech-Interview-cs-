@@ -389,3 +389,91 @@ Redis는 다음 용도로 사용된다
 Redis 접근 시에 용도에 맞는 connection과 Key 설계를 확인해야 한다.
 
 ---
+
+## 19. 테스트 규칙
+
+테스트는 `TestCase`에서 `DatabaseTransactions`을 사용한다
+
+다음 DB 연결을 사용하는 프로젝트로 `$connectionsToTransact`에 모든 활성 connection이 포함되어 있는지 확인해야 한다
+
+### 확인 대상
+
+```text
+user
+ranking
+manage
+master
+```
+
+누락된 connection이 있을 경우 테스트 후 데이터가 롤백되지 않을 수 있다.
+
+---
+
+## 20. 테스트 데이터 생성 규칙
+
+팩토리가 있는 경우 Factory를 사용할 수 있다.
+
+팩토리가 없는 경우 모델의 `create()` 메서드를 사용해야 직접 테스트 데이터를 생성한다
+이때 반드시 모델의 DB connection이 올바른지 확인해야 한다
+
+### 주의 사항
+
+- 테스트용 데이터가 어느 DB에 들어가는 지 확인
+- connection 설정 확인
+- Transction 대상 connection에 포함되어 있는 지 확인
+- 마스터 데이터가 필요한 경우 fixture 확인
+- Redis 캐시 상태 확인
+
+---
+
+## 21. Fixtures 규칙
+
+테스트용 마스터 데이터는 TSV fixture를 사용
+초신 마스터 데이터를 가져오기 위해 다음 스크립터를 사용한다
+
+```bash
+./sync_master_fixtures.sh
+```
+
+Fixture가 오래된 경우 테스트 결과가 실제 운영 데이터 기준과 달라질 수 있다
+
+---
+
+## 22. 문서화 규칙
+
+문서는 클라이언트 개발자와 공유하기 위한 목적으로 작성한다
+문서 저장 경로는 doc를 사용한다
+
+---
+
+## 23. API 문서 작성 규칙
+
+다음과 같은 기준으로 작성한다
+
+```text
+00_api_template.md
+```
+
+파일명은 다음 형식을 사용한다
+
+```text
+[컨텐츠명]_[핸들러명].md
+```
+
+예시는 다음과 같습니다.
+
+```text
+cheering_ranking_get_data.md
+mini_dracon_top.md
+mini_buy_play_count.md
+```
+
+API 목록은 다음 파일에서 관리합니다.
+
+```text
+00_api_list.md
+```
+
+---
+
+## 24. 공통 객체 문서
