@@ -216,3 +216,87 @@ export class RequestLoggerService {
 UserService -> AuthSERVICE
 AuthService -> UserService <- 순환 참조
 ```
+
+### 해결책 1 - 설계 분리
+
+공통 로직을 별도 Service로 분리해 순환 참조 자체를 없앤다
+
+### 해결책 2 forwardRef() 사용
+
+```ts
+// user.service.ts
+@Injectable()
+export class UserService {
+  constructor(
+    @Inject(forwardRef(() => AuthService))
+    private readonly authService: AuthService,
+  ) {}
+}
+```
+
+```ts
+// auth.service.ts
+@Injectable()
+export class AuthService {
+  constructor(
+    @Inject(forwardRef(() => UserService))
+    private readonly userService: UserService,
+  )
+}
+```
+
+모듈 간 순환 참조도 동일하게 처리한다
+
+```ts
+// users.module.ts
+@Module({
+  imports: [forwardref(() => AuthModule)],
+})
+export class UsersModule {}
+```
+
+> ⚠️ `forwardRef()`는 임시방편이다. 가능하면 설계를 분리하는 것이 좋다.
+
+---
+
+## 6. Execution Context
+
+현재 요청이 HTTP, WebSocket, Microservice 등 어떤 실행 환경에서 동작하는 지 접근할 수 있게 해준다
+Guard, Interceptor, Filter 에서 자주 사용한다
+
+```ts
+canActivate(context: ExecutionContext): boolean {
+  // HTTP 요청 객체 접근
+  const request = context.switchToHttp().getRequest();
+
+  // WebSocket 데이터 접근
+  const data = context.switchToWs().getData();
+
+  // 현재 컨트롤러 클래스
+  const controllerClass = context.getClass();
+
+  // 현재 핸들러 메서드
+  const handlerMethod = context.getHandler();
+
+  return Boolean(request.user);
+}
+```
+
+### ArgumentHost, ExecutionContext
+
+| 구분      | ArgumentsHost    | ExecutionContext               |
+| --------- | ---------------- | ------------------------------ |
+| 사용 위치 | Exception Filter | Guard, Interceptor             |
+| 제공 정보 | 현재 실행 인자   | 실행 인자 + 핸들러/클래스 정보 |
+
+---
+
+## 7. Lifecycle Events
+
+NestJS 앱의 시작과 종료 시점에 특정 로직을 실행할 수 있는 훅이다.
+
+| Hook                       | 실행 시점             |
+| -------------------------- | --------------------- |
+| `onModuleInit()`           | 모듈 의존성 초기화 후 |
+| `onApplicationBootstrap()` | 모든 모듈 초기화 후   |
+| `onModuleDestory()`        | 종료 신호 수신 후     |
