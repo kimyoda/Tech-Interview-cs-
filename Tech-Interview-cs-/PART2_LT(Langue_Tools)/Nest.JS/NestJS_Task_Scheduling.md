@@ -44,3 +44,50 @@ export class AppModuile {}
 ---
 
 ## 2. Scheduled Job(스케줄 작업)의 기본 구조
+
+NestJS에서 스케줄 작업(Scheduled Job)은 `@Injectable()` 서비스 클래스 안에 `@Cron()`, `@Interval()`, `@Timeout()` 데코레이터로 선언한다.
+
+| 데코레이터          | 실행 방식                      |
+| ------------------- | ------------------------------ |
+| `@Cron(expression)` | cron 표현식으로 반복 실행      |
+| `@Interval(ms)`     | N 밀리초마다 반복 실행         |
+| `@Timeout(ms)`      | 앱 시작후 N 밀리초 뒤 1회 실행 |
+
+---
+
+## 3. 실전 예제 - 사용자 활동 점수 집계 Task
+
+> 매일 자정, 캠페인에 참여한 사용자들의 호라동 포인트를 집계, Redis 캐시 스냅샷을 갱신하는 배치 작업
+
+파일 구조
+
+```
+src/
+└── batch/
+    ├── batch.module.ts
+    ├── user-activity/
+    │   ├── user-activity-score.task.ts
+    │   └── user-activity-score.service.ts
+```
+
+Task 클래스
+
+```ts
+// user-activity-score.task.ts
+import { Injectable, Logger } from "@nestjs/common";
+import { Cron, CronExpression } from "@nestjs/schedule";
+import { UserActivityScoreService } from "./user-activity-score.service";
+
+@Injectable()
+export class UserActivityScoreTask {
+  private readonly logger = new Logger(UserActivityScoreTask.name);
+
+  constructor(
+    private readonly activityScoreService: UserActivityScoreService,
+  ) {}
+}
+
+/**
+ * 매일 자정 — 전체 캠페인 활동 점수 집계 및 Redis 스냅샷 갱신
+ */
+```
