@@ -292,5 +292,92 @@ export class LeagueStandingsTask {
 Service 클래스
 
 ```ts
+// league-standings.service.ts
+import { Injectable } from "@nestjs/common";
 
+export interface LeagueSession {
+  id: number;
+  name: string;
+  isActive: boolean;
+}
+
+@Injectable()
+export class LeagueSessionSevice {
+  async getActiveSession(): Promise<LeagueSession | null> {
+    // DB에서 isActive=true인 세션 조회
+    return { id: 7, name: "2026 Spring League", isActive: true };
+  }
+}
+
+@Injectable()
+export class LeagueStandingsService {
+  async refreshDailyStandings(sessionId: number): Promise<void> {
+    // 실제 구현: 외부 API 호출 → 순위 계산 → DB/캐시 갱신
+    console.log(`Refreshing standings for session ${sessionId}...`);
+  }
+}
+```
+
+---
+
+## 5. Cron 표현식, CronExpression 상수
+
+NestJS의 `@Cron()`은 일반 cron 표현식처럼 5자리로도 사용할 수 있고, 초 필드를 앞에 붙인 **6자리 표현식도 지원한다**
+공식 문서 기준으로 seconds 필드는 **optional**이다.
+
+```
+[초]  *    *    *    *    *
+      ┬    ┬    ┬    ┬    ┬
+      │    │    │    │    └─ 요일 (0-7, 0·7=일요일)
+      │    │    │    └────── 월 (1-12)
+      │    │    └─────────── 일 (1-31)
+      │    └──────────────── 시 (0-23)
+      └───────────────────── 분 (0-59)
+
+└─ seconds (optional, 0-59) — 붙이면 6자리, 생략하면 5자리
+```
+
+자주 쓰는 `CronExpression` 내장 함수 :
+
+| 상수                                 | cron 표현식      | 실행 주기        |
+| ------------------------------------ | ---------------- | ---------------- |
+| `EVERY_SECOND`                       | `* * * * *`      | 매초             |
+| `EVERY_10_SECONDS`                   | `*/10 * * * * *` | 10초마다         |
+| `EVERY_MIUTE`                        | `0 * * * * *`    | 매분 정각        |
+| `EVERY_HOUR`                         | `0 0 * * * *`    | 매시 정각        |
+| `EVERY_DAY_ATMIDNIGHT`               | `0 0 0 * * *`    | 매일 자정        |
+| `EVERY_DAY_AT_NOON`                  | `0 0 0 * * 0`    | 매주 일요일 자정 |
+| `EVERY_WEEK`                         | `0 0 0 * * 0`    | 매주 일요일 자정 |
+| `EVERY_1ST_DAY_OF_MONTH_AT_MIDNIGHT` | `0 0 0 1 * *`    | 매월 1일 자정    |
+
+---
+
+## 6. Node.js 순수 환경
+
+NestJS없이 node.js 사용하는 호나경이면 `node-cron` 패키지로 동일한 기능을 구현할 수 있다.
+
+```bash
+npm install node-cron
+npm install --save-dev @types/node-cron
+```
+
+```ts
+// scheduler.ts
+
+import cron from "node-cron";
+import { aggregateAllCampaignScores } from "./services/userActivityScoreService";
+import { refreshLeagueStandings } from "./services/leagueStandingsService";
+
+// 매일 자정 - 캠페인 점수 집계
+cron.schedule("0 0 * * *", async () => {
+  console.log("[시작] 캠페인 점수 집계");
+  try {
+    await aggregateAllCampaignScores();
+    console.log("[완료] 캠페인 점수 집계");
+  } catch (err) {
+    console.error("[오류] 캠페인 접수 질계 실패:".err);
+  }
+});
+
+// 매 10분마다 - 리그 순위 갱신
 ```
