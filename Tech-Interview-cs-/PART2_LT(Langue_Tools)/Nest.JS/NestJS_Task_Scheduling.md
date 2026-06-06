@@ -401,3 +401,69 @@ console.log("스케줄러가 시작되었습니다.");
 
 NestJS 스케줄러는 **애플리케이션 프로세스 내부에서 실행**된다. 즉, 서버 인스턴스(Pod)가 여러 개라면 **동일한 스케줄 작업이 인스턴스 수만큼 중복 실행**될 수 있다.
 특히 랭킹 집계, 보상 지급, 시즌 종료 처리, 일일 초기화처럼 **한번만 실행되어야 하는 배치 작업**이 중복 실행되면 데이터 오염이나 장애로 직결된다.
+
+**Laravel과 차이**
+Laravel은 이를 위한 옵션을 공식적으로 제공한다
+
+```php
+$schedule->command('app:aggregate-user-activity-scores')
+    ->daily()
+    ->withoutOverlapping()   // 이전 실행이 끝나지 않았으면 스킵
+    ->onOneServer();         // 다중 서버 중 단 하나의 서버에서만 실행
+```
+
+NestJS는 이와 동등한 기능을 직접 설계해야 한다.
+
+**중복 실행 방지 전략**
+
+| 전략                   | 설명                                             | 적합한 규모                        |
+| ---------------------- | ------------------------------------------------ | ---------------------------------- |
+| **Redis Lock**         | `SET NX EX`로 원차적 lock 획득, finally에서 해제 | 소-중규모, 빠르게 도입 가능        |
+| **DB Lock**            | DB의 행 장금(SELECT FOR UPDATE 등) 활용          | Redis 없는 환경                    |
+| **BullMQ**             | 큐 기반으로 단일 워커가 직업 소비                | 중~대규모, 재시도,모니터링 필요 시 |
+| **전용 Batch Worker**  | 스케줄 전용 인스턴스를 별도로 띄워 격리          | 작업이 많고 안전성 중요 시         |
+| **Kubernetes CronJob** | k8s 레벨에서 단일 Pod로 배치 작업 실행           | k8s 환경, 인프라로 해결 원할 때    |
+
+### Redis Lock 흐름 요약
+
+제 ②(`LeagueStandingsTask`)에서 이미 적용된 패턴의 흐름이다.
+
+```
+스케줄 실행
+  → Redis에 lock key SET NX EX (원자적 획득 시도)
+  → 이미 lock 존재 → 이번 실행 스킵 (warn 로그)
+  → lock 획득 성공 → 배치 로직 실행
+  → finally: 성공/실패 무관하게 lock 해제 (DEL)
+```
+
+## 8. NestJS vs Laravel — 스케줄링 구조 비교
+
+| 항목              | Laravel                                    | NestJS                                   |
+| ----------------- | ------------------------------------------ | ---------------------------------------- |
+| 실행 단위         | Artisan Command 클래스                     | Injectable 서비스의 메서드               |
+| 등록 위치         | `withSchedule()` 또는 `Console/Kernel.php` | `AppModule`에 `ScheduleModule.forRoot()` |
+| 실행 방식         | `schedule:run`을 cron이 호출               | 앱 내부 scheduler가 직접 실행            |
+| crontab 필요 여부 | ✅ 필요                                    | ❌ 일반적으로 불필요                     |
+| cron 표현식       | 보통 5자리 (분~요일)                       | 5자리 또는 초 포함 6자리                 |
+| 중복 실행 방지    | `withoutOverlapping()`, `onOneServer()`    | Redis Lock 등 직접 구현 권장             |
+| 기본 로거         | `$this->info()` / `$this->error()`         | `new Logger(ClassName.name)`             |
+
+---
+
+## 9. 마무리 — Task 설계 원칙
+
+1. **Task는 얇게** — 비즈니스 로직은 Service에 위임하고, Task는 실행 흐름과 로깅만 담당한다.
+2. **에러는 반드시 catch** — 스케줄러에서 uncaught error가 발생하면 이후 실행도 중단될 수 있다.
+3. **Logger를 적극 활용** — `new Logger(ClassName.name)`으로 클래스 이름이 태그된 로그를 남겨 디버깅을 쉽게 한다.
+4. **null 체크 후 early return** — 의존 데이터 없을 때 warn 로그를 남기고 조용히 종료하면 불필요한 에러 알림을 방지한다.
+5. **CronExpression 상수 활용** — 문자열 직접 입력보다 `CronExpression.EVERY_DAY_AT_MIDNIGHT` 같은 상수를 사용하면 가독성과 오타 방지에 유리하다.
+6. **timeZone을 명시** — 서버가 UTC로 구동되는 환경에서는 `@Cron()` 옵션에 `timeZone: 'Asia/Seoul'`을 설정해 의도한 한국 시각에 실행되도록 하다.
+7. **다중 인스턴스 환경은 Redis Lock 또는 전용 Worker** — 인스턴스가 여럿이라면 중복 실행 방지 전략을 반드시 마련한다.
+
+---
+
+> **참고 문서**
+>
+> - [NestJS 공식 — Task Scheduling](https://docs.nestjs.com/techniques/task-scheduling)
+> - [NestJS 공식 — Lifecycle Events](https://docs.nestjs.com/fundamentals/lifecycle-events)
+> - [node-cron npm](https://www.npmjs.com/package/node-cron)
