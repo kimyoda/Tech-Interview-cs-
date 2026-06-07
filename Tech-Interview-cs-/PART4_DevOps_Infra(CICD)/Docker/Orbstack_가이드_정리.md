@@ -167,3 +167,114 @@ docker ps -a
 ---
 
 ## 6. Docker Compose 활용
+
+OrbStack은 Docker Compose와 완전히 호환된다.
+`docker-compose.yml` 또는 `compose. yml`을 사용하는 프로젝트는 기존 방식 그대로 실행할 수 있다.
+예시
+
+```yaml
+services:
+  my-api:
+    image: sail-8.3-app
+    ports:
+      - "9090:80"
+    volumes:
+      - .:/var/www/html
+    depends_on:
+      - my-mysql
+      - my-redis
+
+  my-scheduler:
+    image: sail-8.3-app
+    command: php artisan schedule:work
+    volumes:
+      - .:/var/www/html
+    depends_on:
+      - my-mysql
+      - my-redis
+
+  my-mysql:
+    image: mysql/mysql-server:8.0
+    ports:
+      - "3306:3306"
+    environment:
+      MYSQL_ROOT_PASSWORD: secret
+      MYSQL_DATABASE: my_app
+    volumes:
+      - sail-mysql:/var/lib/mysql
+
+  my-redis:
+    image: redis:alpine
+    ports:
+      - "6379:6379"
+    volumes:
+      - sail-redis:/data
+
+volumes:
+  sail-mysql:
+  sail-redis:
+```
+
+이 구조에서 `my-api` 웹 요청을 처리ㅐ, `my-scheduler`는 Laravel 스케줄 작업을 처리한다.
+MySQL과 Redis는 별도 컨테이너로 분리되고 API 서버와 운영툴 양쪽에서 공통으로 사용할 수 있다.
+
+OrbStack GUI에서 Compose 프로젝트 단위로 컨테이너가 묶어서 표시된다.
+
+```
+my-api
+├── laravel.test
+└── scheduler
+
+my-mgmt
+├── laravel.test
+├── laravel.worker1
+├── laravel.worker2
+├── my-mysql
+├── my-mysql-new
+├── my-redis
+└── my-redis-new
+```
+
+---
+
+## 7. 네트워크 활용
+
+OrbStack은 Docker 네트워크와 포트 포워딩을 지원한다
+
+**포트 접근**
+API 서버가 9090 포트를 사용하면 macOS 브라우저에서 다음 주소로 접근할 수 있다.
+
+```
+http://localhost:9090
+```
+
+**Compose 내부 컨테이너 간 통신**
+같은 Compose 네트워크 안에서 서비스명을 호스트로 사용할 수 있다.
+
+```env
+# .env 파일 예시
+DB_HOST=my-mysql
+DB_PORT=3306
+
+REDIS_HOST=my-redis
+REDIS_PORT=6379
+```
+
+```
+my-api  ──┐
+          ├── my-mysql (공유 DB)
+my-mgmt ──┘
+
+my-api  ──┐
+          ├── my-redis (공유 Redis)
+my-mgmt ──┘
+```
+
+해당 구조를 통해 API 서버와 운영툴이 같은 데이터를 바라보는 로컬 개발 환경을 만들 수 있다.
+Compose 네트워크가 다를 경우 서비스명으로 직접 접근이 안될 수 있다. 이런 경우 외부 네트워크를 정의하거나 컨테이너 IP 또는 포트를 직접 사용하는 방법을 고려한다
+
+---
+
+## 8. Kubernetes 활용 가능
+
+OrbStack은 로컬 개발용 단일 노드 Kubernetes 클러스터를 기본 제공한다
