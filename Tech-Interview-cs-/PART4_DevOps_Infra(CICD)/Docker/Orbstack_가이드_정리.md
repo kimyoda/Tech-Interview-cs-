@@ -278,3 +278,144 @@ Compose 네트워크가 다를 경우 서비스명으로 직접 접근이 안될
 ## 8. Kubernetes 활용 가능
 
 OrbStack은 로컬 개발용 단일 노드 Kubernetes 클러스터를 기본 제공한다
+
+Docker Desktop의 Kubernetes 기능처럼 로컬에서 Kubernetes리소스를 테스트할 수 있다.
+
+**활성화 방법**
+OrbStack 앱 설정(Settings > Kubernetes)에서 Kubernetes를 활성화한다. 활성화 후 Kubeconfig가 자동으로 병합되므로 별도 설정 없이 `kubectl`을 바로 사용할 수 있다.
+
+**주요 활용 케이스**
+
+- Deployment, Service, Ingress 구성 테스트
+- ConfigMap / Secret 관리 검증
+- 로컬 API 서버를 Kubernetes 환경에서 구동 테스트
+- 운영 환경 배포 전 사전 검증
+
+---
+
+## 9. Linux Machines 활용
+
+OrbStack은 Docker 컨테이너 뿐 아니라 Linux 머신도 실행할 수 있다
+
+macOS안에서 가벼운 Linux 환경을 직접 실행할 수 있어, WSL(Windows Subsystem for Linux)과 유사한 경험을 제공한다.
+
+**Ubuntun 머신 생성 및 접속**
+
+```bash
+# Ubuntu 머신 생성
+orb create ubuntu my-uubuntu
+
+# 머신 접속
+orb -m my-ubuntu
+
+# SSH로 접속
+ssh orb
+```
+
+**Linux machine이 유용한 경우**
+
+- macOS가 아닌 Liunx 환경에서 명령어 동작 확인
+- Liunx 패키지 설치 및 의존성 테스트
+- nginx, redis, mysql 등 서비스 직접 설치 테스트
+- shell script 검증
+- 배포 스크립트 사전 검증
+- Liunx 환경에서만 재현되는 버그 디버깅
+
+---
+
+## 10. 실무 사용 흐름 예시
+
+다음은 OrbStack으로 로컬 개발 환경을 구성하는 전체 흐름이다.
+
+### 1단계: OrbStack 설치 및 실행
+
+```bash
+brew install orbstack
+open -a OrbStack
+```
+
+### 2단계: Docker context 확인 및 전환
+
+```bash
+docker context ls
+docker context use orbstack
+```
+
+### 3단계: 기존 Docker Desktop 데이터 마이그레이션
+
+```bash
+orb docker migrate
+```
+
+### 4단계: my-api 실행
+
+```bash
+cd ~/workspace/my-api
+./vendor/bin/sail up -d
+```
+
+### 5단계: my-mgmt 실행
+
+```bash
+cd ~/workspace/my-mgmt
+./vendor/bin/sail up -d
+```
+
+### 6단계: 컨테이너 실행 확인
+
+```bash
+docker ps
+```
+
+### 7단계: 로그 확인
+
+```bash
+docker logs -f my-api-laravel.test-1
+```
+
+### 8단계: API 동작 테스트
+
+```bash
+curl http://localhost:9090
+curl http://localhost:9090/api/health
+```
+
+### 9단계: DB 마이그레이션 및 테스트 실행
+
+```bash
+./vendor/bin/sail artisan migrate
+./vendor/bin/sail artisan test
+```
+
+### 10단계: 사용하지 않는 리소스 정리
+
+```bash
+# 중지된 컨테이너 정리
+docker container prune
+
+# 사용하지 않는 이미지 정리
+docker image prune -a
+
+# 볼륨 목록 확인 후 정리 (DB 데이터 유무 반드시 확인)
+docker volume ls
+docker volume prune
+```
+
+---
+
+## 11. Docker Desktop과 같이 사용할 때 주의점
+
+Docker Desktop과 OrbStack을 동시에 설치해서 사용할 수는 있다. 하지만 Docker context가 어디를 바라보는지 주의해야 한다.
+
+### context 전환
+
+```bash
+# OrbStack 사용
+docker context use orbstack
+
+# Docker Desktop 사용
+docker context use desktop-linux
+
+# 현재 context 확인
+docker context ls
+```
