@@ -419,3 +419,40 @@ docker context use desktop-linux
 # 현재 context 확인
 docker context ls
 ```
+
+---
+
+## 12. OrbStack 사용하는 이유
+
+OrbStack을 로컬 개발 환경에 적용했을 때 체감할 수 있는 장점을 정리하면 다음과 같다.
+
+1. 가볍다: Docker Desktop보다 CPU와 메모리 사용량이 눈에 띄게 적다
+2. 빠르다: OrbStack 엔진 시작 속도가 훨씬 빠르고, 파일 시세틈 성능도 개선됐다.
+3. 호환성: 기존 Docker Compose 프로젝트를 명령어 수정없이 그댜로 실행할 수 있다
+4. GUI 편의성: 컨테이너, 이미지, 볼륨 상태를 GUI에서 한눈에 파악할 수 있다
+5. 파일 접근: Docker 볼륨을 `~/OrbStack/docker`에서 Finder로 바로 열 수 있다.
+6. Kubernetes 내장: 별도 설치 없이 로컬 Kubernetes 클러스터를 사용할 수 있다
+7. Liunx machine: macOS에서 Liunx 환경을 가볍게 실행할 수 있다
+8. 멀티 프로젝트 관리: API 서버, 운영툴, 배치, DB, Redis를 분리해 체계적으로 관리하기 좋다.
+
+---
+
+## 13. 정리
+
+OrbStack은 macOS 개발 환경에서 Docker Desktop을 대체할 수 있는 가볍고 빠른 컨테이너 실행 도구다.
+Docker Compose, 볼륨, 네트워크, 포트 포워딩, Kubernetes, Linux machine을 모두 지원하기 때문에 웹 서버 개발은 물론, API 서버, 운영툴, 배치 서버, 스케줄러 등 다양한 구성의 로컬 개발 환경에 잘 맞는다.
+
+Docker Desktop에서 OrbStack으로 전환 순서
+
+```
+1. brew install orbstack
+2. OrbStack 앱 실행 (open -a OrbStack)
+3. docker context 확인 (docker context ls)
+4. Docker Desktop 데이터 마이그레이션 (orb docker migrate)
+5. 기존 프로젝트 docker compose 또는 sail up 실행
+6. DB / Redis / API 연결 상태 확인
+7. 이상 없으면 Docker Desktop 정리 검토
+   Docker Desktop이 무겁거나, Mac에서 컨테이너 실행 성능과 리소스 사용량을 개선하고 싶다면 OrbStack을 충분히 검토해볼 만하다.
+```
+
+작성 기준: OrbStack 최신 버전 / macOS Sequoia / Apple Silicon 환경
