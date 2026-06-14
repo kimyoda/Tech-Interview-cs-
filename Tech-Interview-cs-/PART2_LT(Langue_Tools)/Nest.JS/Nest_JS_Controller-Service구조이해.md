@@ -108,3 +108,91 @@ Service 책임 범위
 | 데이터 가공 및 변환              | `@Req()`, `@Res()` 사용   |
 | 예외 처리 (NotFoundException 등) | 라우팅 관련 로직          |
 | Repository 호출                  | 다른 Controller 직접 참조 |
+
+---
+
+## 의존성 주입(DI)
+
+#### 의존성 주입이란?
+
+의존성 주입(Dependency Injection)이란 **객체가 필요로 하는 의존성(다른 객체)을 외부에서 제공받는 패턴**이다.
+
+```ts
+// 의존성 주입 없이 직접 생성
+export class UserController {
+  private userService = new UserService(); // 강한 결합, 테스트 어려움
+}
+
+// 의존성 주입 사용
+export class UserController {
+  constructor(private readonly userService: UserService) {} // 외부에서 주입
+}
+```
+
+#### NestJS의 컨테이너
+
+NestJS는 내부적으로 **IoC(Inversion of Control)컨테이너** 를 가진다.
+`@Injectable()` 붙은 클래스를 컨테이너가 직접 인스턴스하고 생명주기를 관리한다.
+
+```
+[ IoC 컨테이너 ]
+      │
+      ├── UserService 인스턴스 생성 및 보관
+      ├── UserRepository 인스턴스 생성 및 보관
+      └── UserController 생성 시 → UserService 자동 주입
+```
+
+#### 주입 방식 3가지
+
+**1. 생성자 주입(Constructor Injection)**
+
+```ts
+@Injectable()
+export class UserService {
+  constructor(
+    private readonly userRepository: UserRepository,
+    private readonly mailService: MailService,
+  ) {}
+}
+```
+
+가장 일반적이고, 의존성이 명확하게 드러나고 테스트 시 Mock으로 교체하기 쉽다.
+
+**2. 속성 주입(Property Injection)**
+
+```ts
+@Injectable()
+export class UserService {
+  @Inject(MailService)
+  private readonly mailService: MailService;
+}
+```
+
+순환 의존성 문제를 우회할 때 드물게 사용한다
+
+**3. 커스텀 프로바이더**
+
+```ts
+// 인터페이스 기반 주입 — 구현체를 교체하기 쉬움
+{
+  provide: 'USER_REPOSITORY',
+  useClass: UserRepository,
+}
+
+// 값 주입
+{
+  provide: 'APP_CONFIG',
+  useValue: { timeout: 3000 },
+}
+
+// 팩토리 함수로 생성
+{
+  provide: 'DB_CONNECTION',
+  useFactory: async (config: ConfigService) => {
+    return createConnection(config.get('DATABASE_URL'));
+  },
+  inject: [ConfigService],
+}
+```
+
+---
