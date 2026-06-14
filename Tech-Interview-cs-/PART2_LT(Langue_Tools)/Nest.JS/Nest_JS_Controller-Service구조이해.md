@@ -196,3 +196,134 @@ export class UserService {
 ```
 
 ---
+
+## Module
+
+NestJS에서 Controller, Service, Repository는 Module 단위로 묶여 관리된다
+Module은 해당 기능에 필요한 모든 구성 요소를 선언, 다른 Module에 노출할 범위를 결정한다
+
+```ts
+// user.module.ts
+import { Module } from "@nestjs/common";
+import { TypeOrmModule } from "@nestjs/typeorm";
+import { UserController } from "./user.controller";
+import { UserService } from "./user.service";
+import { User } from "./entities/user.entity";
+
+@Module({
+  import: [TypeOrmModule.forFeature([User])],
+  controllers: [UserController],
+  providers: [UserService],
+  exports: [UserService],
+})
+export class UserModuel {}
+```
+
+Module 간 의존성 관계
+
+```
+AppModule
+  ├── UserModule
+  │     ├── UserController
+  │     ├── UserService  (exports로 외부 공개)
+  │     └── UserRepository
+  │
+  └── OrderModule
+        ├── OrderController
+        ├── OrderService
+        └── imports: [UserModule]  ← UserService를 주입받아 사용 가능
+```
+
+---
+
+## 요청 흐름 정리
+
+실제 `GET/users/1` 요청이 들어왔을 때 내부 흐름을 정리해봤다.
+
+```
+1. 클라이언트 -> GET /users/1
+
+2. NestJS 라우터
+   └── @Controller('users') + @Get(':id') 매칭
+   └── UserController.findOne(id = '1') 호출
+
+3. UserController.findOne()
+   └── this.userService.findOne(1) 호출
+       (userService는 생성자에서 주입된 인스턴스)
+
+4. UserService.findOne(1)
+   └── this.userRepository.findOne({ where: { id: 1 } }) 호출
+   └── 결과 없으면 NotFoundException 던짐
+   └── 결과 있으면 User 엔티티 반환
+
+5. UserController
+   └── Service에서 받은 User 객체를 JSON으로 직렬화하여 응답
+
+6. 클라이언트  ←  200 OK { id: 1, name: "...", ... }
+```
+
+---
+
+## new를 쓰지 않는 이유
+
+직접 `new`를 인스턴스를 생성하면 다음 이슈가 있다.
+
+**1. 테스트가 어렵다**
+
+```ts
+// 직접 생성 — 테스트 시 실제 DB가 필요함
+export class UserController {
+  private userService = new UserService(new UserRepository(...));
+}
+
+// 주입 — 테스트 시 Mock으로 교체 가능
+describe('UserController', () => {
+  let controller: UserController;
+
+  beforeEach(async () => {
+    const module = await Test.createTestingModule({
+      controllers: [UserController],
+      providers: [
+        {
+          provide: UserService,
+          useValue: { findAll: jest.fn().mockResolvedValue([]) },  // Mock 주입
+        },
+      ],
+    }).compile();
+
+    controller = module.get<UserController>(UserController);
+  });
+});
+```
+
+**2. 싱글톤 보장이 어렵다**
+NestJS의 IoC 컨테이너는 기본적으로 Provider를 싱글톤으로 관리한다
+`new`를 쓰면 호출마다 새 인스턴스가 생성되어 상태 공유나 메모리 낭비가 발생한다
+
+**3. 의존성 변경 시 수정 범위가 커진다**
+
+```ts
+// UserService 생성자가 바뀌면 new하는 모든 곳을 수정해야 함
+private userService = new UserService(dep1, dep2, dep3);
+
+// 주입 방식은 컨테이너가 알아서 처리
+constructor(private readonly userService: UserService) {}
+```
+
+---
+
+| 구성 요소      | 역할                               | 핵심 데코레이터 |
+| -------------- | ---------------------------------- | --------------- |
+| **Controller** | HTTP 요청 수신 및 응답 반환        | `@Controller()` |
+| **Service**    | 비즈니스 로직 처리                 | `@Injectable()` |
+| **Module**     | 구성 요소 묶음 및 의존성 범위 선언 | `@Module()`     |
+
+```
+핵심 원칙
+  ├── Controller는 얇게 (Thin Controller)
+  ├── Service는 두껍게 (Fat Service)
+  ├── 의존성은 항상 주입받아라 (new 금지)
+  └── Module 단위로 캡슐화하라
+```
+
+의존성 주입을 제대로 활용하면 **테스트 용이성**, **결합도 감소**, **유지보수성 향상** 세 가지를 동시에 얻을 수 있다.
