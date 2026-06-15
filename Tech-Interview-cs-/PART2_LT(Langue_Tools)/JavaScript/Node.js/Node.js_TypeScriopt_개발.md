@@ -129,3 +129,24 @@ const user: { name: string; age: number; email?: string } = {
 ```
 
 ### 함수 타입
+
+```ts
+// ────────────────────────────────────────
+// 기본 함수 타입 선언
+// ────────────────────────────────────────
+
+// 일반 함수
+function add(a: number, b: number): number {
+  return a + b;
+}
+
+// 화살표 함수
+const multiply = (a: number, b: number): number => a * b;
+
+// 반환 타입은 대부분 추론 가능 - 간단한 경우 생략 가능
+const subtract = (a: number, b: number) => a - b; // number로 추론
+
+// ────────────────────────────────────────
+// 선택적 매개변수 (?)
+// ────────────────────────────────────────
+```
