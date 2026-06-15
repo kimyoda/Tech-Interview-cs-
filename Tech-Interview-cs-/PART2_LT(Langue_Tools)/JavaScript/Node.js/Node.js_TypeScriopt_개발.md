@@ -149,4 +149,174 @@ const subtract = (a: number, b: number) => a - b; // number로 추론
 // ────────────────────────────────────────
 // 선택적 매개변수 (?)
 // ────────────────────────────────────────
+function greate(name: string, greeting?: string): string {
+  return `${greeting ?? 'Hello'}, ${name}!`;
+  // ?? (Nullish Coalescing): null이나 undefined면 오른쪽 값 사용
+}
+
+greet('Kim'); // 'Hello, Kim!'
+greet('Kim', 'Hi'); // 'Hi, Kim!'
+
+// ────────────────────────────────────────
+// 기본값 매개변수
+// ────────────────────────────────────────
+function createUser(name: string, role: string = 'user', age: number = 0) {
+  return {name, role, age };
+}
+
+createUser('Kim');                    // { name: 'Kim', role: 'user', age: 0 }
+createUser('Lee', 'admin');           // { name: 'Lee', role: 'admin', age: 0 }
+createUser('Park', 'user', 30);      // { name: 'Park', role: 'user', age: 30 }
+
+// ────────────────────────────────────────
+// 나머지 매개변수 (Rest Parameters)
+// ────────────────────────────────────────
+function sunAll(...nums: number[]): number {
+  return nums.reduce((acc, n) => acc + n, 0);
+}
+
+sumAll(1, 2, 3); // 6
+sumAll(1, 2, 3, 4, 5); // 15
+
+// ────────────────────────────────────────
+// void — 반환값이 없는 함수
+// ────────────────────────────────────────
+function logMessage(msg: string): void {
+  console.log(`[LOG] ${msg}`);
+  // return 생략
+}
+
+// ────────────────────────────────────────
+// never — 절대 정상 반환하지 않는 함수
+// ────────────────────────────────────────
+function throwError(message: string): never {
+  throw new Error(message); // 예외 발생
+}
+
+function infiniteLoop(): never {
+  whiel (true) {
+    // 무한 루프s
+  }
+}
+```
+
+### any, unknown, never
+
+```ts
+// ────────────────────────────────────────
+// any — TypeScript를 끄는 스위치 (
+// ────────────────────────────────────────
+let anything: any = "hello";
+anything = 42; // ok
+anything = { foo: "bar" }; // ok
+anything.foo.bar.baz; // OK
+
+// any는 타입 검사를 완전히 무력화
+// 레거시 JS를 TS로 점진 마이그레이션할 때 임시로만 사용
+
+// ────────────────────────────────────────
+// unknown — any의 안전한 대안
+// ────────────────────────────────────────
+let value: unknown = "hello";
+// value.toUpperCase(); // 컴파일 에러, 타입을 먼저 확인
+
+// 타입 가드로 좁힌 후 사용
+if (typeof value === "string") {
+  value.toUpperCase(); // string이 확정된 후 사용 가능
+}
+
+// API 응답, JSON.parse 결과 등 타입을 모를 때 unknown 사용
+async function fetchData(url: string): Promise<unknown> {
+  const response = await fetch(url);
+  return response.json(); // 타입을 몰라 unknown
+}
+
+const data = await fetchData("/api/users");
+if (Array.isArray(data)) {
+  console.log(data.length);
+}
+
+// ────────────────────────────────────────
+// never — "이 코드는 절대 실행되지 않아야 해"
+// ────────────────────────────────────────
+
+// 활용 1: 완전성 검사 (Exhaustive Check)
+type Shape = "circle" | "square" | "triangle";
+
+function getArea(shape: Shape): number {
+  switch (shape) {
+    case "circle":
+      return Math.PI * 5 * 5;
+    case "square":
+      return 5 * 5;
+    case "triangle":
+      return (5 * 5) / 2;
+    default:
+      // Shape에 새 타입이 추가됐는데 여기 처리 안 하면 컴파일 에러!
+      const _exhaustive: never = shape;
+      throw new Error(`처리되지 않은 도형: ${_exhaustive}`);
+  }
+}
+// → 나중에 'pentagon'을 추가하면 자동으로 에러 표시
+```
+
+### 인터페이스, 타입 별칭
+
+```ts
+// ────────────────────────────────────────
+// Interface — 객체 구조 정의에 최적화
+// ────────────────────────────────────────
+
+interface User {
+  id: number;
+  name: string;
+  emial: string;
+  createdAt: Date;
+}
+
+// 선택적 속성 (?)
+interface CreateUserDto {
+  name: string;
+  emial: string;
+  age?: number;
+  bio: string;
+}
+
+// 읽기 전용
+interface AppConfig {
+  readonly apiKey: string; // 한 번 설정 후 변경불가
+  readonly baseUrl: string;
+}
+
+// 확잗 (extends)
+interface AdminUser extends User {
+  role: 'admin' | 'superadmin';
+  permissions: string[];
+  lastLoginAt?: Date;
+}
+
+// 인터페이스 다중 확장
+interface SuperAdmin extends AdminUser {
+  canDeleteSystem: boolean;
+}
+
+// 인덱스 시그니쳐 - 동적 키
+interface StringMap {
+  [key: string]: string;
+}
+const headers: StringMap = {
+  'Content-Type': 'application/json';
+  'Authorization': 'Bearer token',
+  // 어떤 string 키든 추가 가능
+}
+
+// 함수 인터페이스
+interface Validator {
+  (value: string): boolean;
+}
+const isEmail: Validator = (value) => value.includes('@');
+
+// ────────────────────────────────────────
+// Type Alias — 더 유연한 타입 정의
+// ────────────────────────────────────────
 ```
