@@ -319,4 +319,22 @@ const isEmail: Validator = (value) => value.includes('@');
 // ────────────────────────────────────────
 // Type Alias — 더 유연한 타입 정의
 // ────────────────────────────────────────
+
+// 원시 타입에 이름 붙이기
+type UserId = number;
+type Email = string;
+type Username = string;
+
+// 유니온 타입
+type Status = 'active' | 'inactive' | 'banned' | 'pending';
+type HttpStatus = 200 | 201 | 204 | 400 | 401 | 403 | 404 | 500;
+type Direction = 'up' | 'down' | 'left' | 'right';
+
+// 튜플 타입
+type Point = [number, number];
+type RGB = [number, number, number];
+
+// 함수 타입
+type RequestHandelr = (req: Request, res: Response, next: NextFunction) => void;
+type AsyncHandler = (req: Request, res: Response) => Promise<void>;
 ```
