@@ -337,4 +337,14 @@ type RGB = [number, number, number];
 // 함수 타입
 type RequestHandelr = (req: Request, res: Response, next: NextFunction) => void;
 type AsyncHandler = (req: Request, res: Response) => Promise<void>;
+
+// 교차 타입 (여러 타입 합치기)
+type Timestamped = { createdAt: Date; updatedAt: Date};
+type SoftDeletable = { deletedAt: Date | null};
+type BaseEntity = Timestamped & SoftDeletable;
+
+// 조건부 타입
+type InString<T> = T extends string ? 'yes' : 'no';
+type Result1 = IsString<string>; // 'yes'
+type Result2 = IsString<number>; // 'no'
 ```
