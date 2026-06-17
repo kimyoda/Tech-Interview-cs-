@@ -536,3 +536,82 @@ async count() {
 ---
 
 ## 유니언 & 인터 섹션
+
+```ts
+// ────────────────────────────────────────
+// 유니언 (|) — "A 또는 B"
+// ────────────────────────────────────────
+type StringOrNumber = string | number;
+type Status = "success" | "error" | "loading" | "idle";
+type HttpMethod = "GET" | "POST" | "PUT" | "PATCH" | "DELETE";
+
+// 실용적인 예시
+function formatValue(value: string | number): string {
+  if (typeof value === "number") {
+    return value.toLocalString(); // 1000 -> '1,000'
+  }
+  return value.trim(); // ' hello ' -> 'hello'
+}
+
+// 판별 유니온
+interface LoadingState {
+  status: "loading";
+}
+interface SuccessState {
+  status: "success";
+  data: User[];
+}
+
+interface ErrorState {
+  status: "error";
+  error: string;
+}
+
+type FetchState = LoadingState | SuccessState | ErrorState;
+
+function renderState(state: FetchState) {
+  switch (state.status) {
+    case "loading":
+      return "로딩 중...";
+    case "success":
+      return `${state.data.length}명의 유저`; // data 접근
+    case "error":
+      return `에러: ${state.error}`; // error
+  }
+}
+
+// ────────────────────────────────────────
+// 인터섹션 (&) — "A이면서 B"
+// ────────────────────────────────────────
+interface Timestamped {
+  createdAt: Date;
+  updatedAt: Date;
+}
+
+interface SoftDeleteable {
+  deletedAt: Date | null;
+  isDeleted: boolean;
+}
+
+// 두 인터페이스를 합침
+type BaseEntity = Timestamped & SoftDeletable;
+
+// 모든 DB dpsxlxldp wjrdyd
+interface UserEntity extends BaseEntity {
+  id: number;
+  name: string;
+  email: string;
+}
+
+// UserEntity = {id, name, email, createAt, updatedAt, deletedAt, isDeleted }
+```
+
+---
+
+## 타입 가드
+
+런타임에 타입을 좁혀나가는 방법이다. 코드 흐름을 분석해 타입을 좁힌다.
+
+```
+
+```
