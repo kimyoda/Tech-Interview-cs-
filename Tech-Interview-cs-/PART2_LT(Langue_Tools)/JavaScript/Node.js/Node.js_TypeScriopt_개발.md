@@ -348,3 +348,191 @@ type InString<T> = T extends string ? 'yes' : 'no';
 type Result1 = IsString<string>; // 'yes'
 type Result2 = IsString<number>; // 'no'
 ```
+
+#### Interface, Type 차이
+
+| 상황                    | 권장        | 이유                           |
+| ----------------------- | ----------- | ------------------------------ |
+| 객체/클래스 구조 정의   | `interface` | `extends`로 확장하기 쉽다      |
+| 라이브러리 타입 확장    | `interface` | Declaration Merging을 지원한다 |
+| 유니언, 튜플, 원시 타입 | `type`      | `interface`로 표현할 수 없다   |
+| 조건부/맵드 타입        | `type`      | `type`에서만 지원한다          |
+| 일반적인 경우           | 팀 컨벤션   | 코드 통일성이 중요하다         |
+
+```ts
+// Interface 좋은 점: Declaration Merging (선언 합치기)
+// 같은 이름으로 여러 번 선언하면 자동으로 병합
+interface Animal {
+  name: string;
+}
+interface Animal {
+  age: number;
+}
+// -> Animal = { name: string; age: number} 로 합쳐진다
+
+// Type은 중복 선언 불가
+type Animal = { name: string };
+type Animal = { age: number }; // Error
+```
+
+---
+
+## 제네릭
+
+> 제네릭(Generic) = 타입을 나중에 결정하는 문법 (타입의 변수)
+
+```ts
+// ────────────────────────────────────────
+// 제네릭 없이 — 타입마다 함수를 따로 만들어야 함
+// ────────────────────────────────────────
+function getFirstNumber(arr: number[]): number {
+  return arr[0];
+}
+
+function getFirstString(arr: string[]): string {
+  return arr[0];
+}
+
+function getFristBoolean(arr: boolean[]): boolan {
+  return arr[0];
+}
+// -> 같은 로직인데 타입만 다른 함수가 늘어난다
+
+// ────────────────────────────────────────
+// 제네릭 없이 — 타입마다 함수를 따로 만들어야 함
+// ────────────────────────────────────────
+function getFirst<T>(arr: T[]): T {
+  return arr[0];
+}
+
+// T는 나중에 결정될 타입을 나타내는 변수, 호출 시 T가 무엇인지 결정된다
+getFirst<number>([1, 2, 3]); // 반환: number
+getFirst<string>(['a', 'b']); // 반환: string
+getFirst([true, false]); // 타입 추론 boolean
+
+자주 쓰는 제네릭 패턴
+// ────────────────────────────────────────
+// 패턴 1: API 응답 래퍼
+// ────────────────────────────────────────
+interface ApiResponse<T> {
+  success: boolean;
+  data: T;
+  message?: string;
+  timestamp: string;
+}
+
+interface User {
+  id: number;
+  name: string;
+  email: string;
+}
+
+// 단건 응답
+const userResponse: ApiResponse<User> = {
+  success: true,
+  data: { id: 1, name: 'Kim', email: 'kim@example.com'},
+  timestamp: new Date().toISOString(),
+};
+
+// 목록 응답
+const usersResponse: ApiResponse<User []> = {
+  success: true,
+  data: [{ id: 1, name: 'Kim', email: 'kim@example.com'}],
+  timestamp: new Date().toISOString(),
+};
+
+// 페이지네이션 응답
+interface PaginatedResponse<T> {
+  data: T[];
+  total: number;
+  page: number;
+  limit: number;
+  totalPages: number;
+}
+
+// ────────────────────────────────────────
+// 패턴 2: 제네릭 제약 (extends)
+// ────────────────────────────────────────
+interface HasId {
+  id: number;
+}
+
+// T는 반드시 id 속성을 가져야 한다
+function findById<T extends HasId>(items: T[], id: number): T | undefined {
+  return items.find(item => item.id === id);
+}
+
+const users = [
+  { id: 1, name: 'Kim', age: 25},
+  { id: 2, name: 'Lee', age: 30},
+];
+
+const found = findById(users, 1); // User 타입으로 반환
+// findById([1, 2, 3], 1); // 에러, number는 id 속성이 없다
+
+// ────────────────────────────────────────
+// 패턴 3: 제네릭 기본값
+// ────────────────────────────────────────
+interface Pagination<t = unknown> {
+  items: T[];
+  total: number;
+  page: number;
+  limit: number;
+}
+
+// T 지정 안 하면 unknown이 기본값
+const unknownPage: Pagination = { items: [], total: 0, page: 1, limit: 10};
+
+// T 지정 시
+const userPage: Pagination<User> = { items: [], total: 0, page: 1, limit: 10};
+
+// ────────────────────────────────────────
+// 패턴 4: Repository 패턴
+// ────────────────────────────────────────
+interface Repository<T, ID = number> {
+  findById(id: ID): Promise<T | null>;
+  findAll(options?: { page?: number; lmit?: number}): Promise<T[]>;
+  create(data: Omit<T, 'id' | 'createdAt' | 'updatedAt'>): Promise<T>;
+  update(id: ID, data: Partial<T>): Promise<T>;
+  delete(id: ID): Promise<void>;
+  count(): Promise<number>;
+}
+
+interface UserEntity {
+  id: number;
+  name: string;
+  email: string;
+  createdAt: Date,
+  updatedAt: Date;
+}
+
+class UserRepository implements Repository<UserEntity> {
+  async findById(id: number): Promise<UserEntity | null> {
+    // DB 조회 로직
+    return null;
+  }
+async findAll() {
+  return [];
+}
+async create(data: Omit<UserEntity, 'id' | 'createdAt' | 'updated'>) {
+  return {
+    ...data, id: 1, createdAt: new Date(), updatedAt: new Date()
+  };
+}
+async update(id: number, data: Partial<UserEntity>) {
+  return {
+
+  } as UserEntity;
+}
+async delete(id: number) {
+
+}
+async count() {
+  return 0;
+}
+}
+```
+
+---
+
+## 유니언 & 인터 섹션
