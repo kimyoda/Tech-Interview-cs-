@@ -747,4 +747,43 @@ interface User {
   createdAt: Date;
   updatedAt: Date;
 }
+
+// ────────────────────────────────────────
+// Partial<T> — 모든 속성을 선택적으로
+// ────────────────────────────────────────
+type UpdateUserDto = Partial<User>;
+// = {id?: number; name?: string; emial?: string; ...}
+
+app.patch(
+  "/users/id",
+  async (req: Request<{ id: string }, {}, UpdateUserDto>, res) => {
+    const updated = await UserService.update(req.params.id, req.body);
+    res.json(updated);
+  },
+);
+
+// ────────────────────────────────────────
+// Required<T> — 모든 속성을 필수로
+// ────────────────────────────────────────
+type StrictUser = Required<User>;
+// bio?: string -> bio: string
+
+// ────────────────────────────────────────
+// Pick<T, K> — 특정 속성만 선택
+// ────────────────────────────────────────
+// API 응답에서 민감한 정보 제외
+type UserProfile = Pick<User, "id" | "name" | "email" | "role">;
+// password, createdAt 제외
+
+type UserSummary = Pick<User, "id" | "name">;
+// 목록 조회 시 최소한의 정보
+
+// ────────────────────────────────────────
+// Omit<T, K> — 특정 속성 제외
+// ────────────────────────────────────────
+// DB에 저장 시 id와 시간 필드는 자동 생성
+type CreateUserDto = Omit<User, "id" | "createdAAt" | "updatedAt">;
+
+// 비밀번호 필드 제외 응답 타입
+type UserResponse = Omit<User, "password">;
 ```
