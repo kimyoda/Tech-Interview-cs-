@@ -612,6 +612,178 @@ interface UserEntity extends BaseEntity {
 
 런타임에 타입을 좁혀나가는 방법이다. 코드 흐름을 분석해 타입을 좁힌다.
 
+```ts
+// ────────────────────────────────────────
+// 1. typeof — 원시 타입 검사
+// ────────────────────────────────────────
+function processInput(value: string | number | boolean) {
+  if (typeof value === "string") {
+    return value.toUpperCase(); // string
+  } else if (typeof value === "number") {
+    return value.toFixed(2); // number
+  } else {
+    return value ? "YES" : "NO"; // boolean
+  }
+}
+
+// ────────────────────────────────────────
+// 2. instanceof — 클래스/생성자 검사
+// ────────────────────────────────────────
+class ApiError extends Error {
+  constructor(
+    public statusCode: number,
+    message: string,
+  ) {
+    super(message);
+    this.name = "ApiError";
+  }
+}
+
+class ValidationError extends Error {
+  constructor(
+    public field: string,
+    message: string,
+  ) {
+    super(message);
+    this.name = "ValidationError";
+  }
+}
+
+function handleError(err: Error) {
+  if (err instanceof ApiError) {
+    // ApiError 확정
+    console.error(`[API ${err.statusCode}] ${err.message}`);
+  } else if (err instanceof ValidationError) {
+    // ValidationError 확정
+    console.error(`[Validation] ${err.filed}: ${err.message}`);
+  } else {
+    console.error(`[Unknown] ${err.message}`);
+  }
+}
+
+// ────────────────────────────────────────
+// 3. in 연산자 — 속성 존재 확인
+// ────────────────────────────────────────
+interface Cat {
+  meow(): void;
+  purr(): void;
+}
+
+interface Dog {
+  bark(): void;
+  fetch(): void;
+}
+
+function makeSound(animal: Cat | Dog) {
+  if ("meow" in animal) {
+    animal.meow(); // Cat 확정
+    animal.purr();
+  } else {
+    animal.bark(); // Dog 확정
+    animal.fetch();
+  }
+}
+
+// ────────────────────────────────────────
+// 4. 사용자 정의 타입 가드 (is)
+// ────────────────────────────────────────
+interface SuccessResponse {
+  success: true;
+  data: User;
+}
+
+interface ErrorResponse {
+  success: false;
+  error: string;
+  code: number;
+}
+
+type ApiResult = SuccessResponse | ErrorResponse;
+
+// 반환 타입 'result is SuccessResponse' → 이 함수가 true를 반환하면 타입 좁힘
+function isSuccessResponse(result: ApiResult): result is SuccessResponse {
+  return result.success === true;
+}
+
+async function fetchUser(id: number): Promise<void> {
+  const result: ApiResult = await api.get(`/users/${id}`);
+
+  if (isSuccessResponse(result)) {
+    console.log(result.data.name); // SuccessResponse
+  } else {
+    console.error(`[${result.code}] ${result.error}`); // ErrorResponse
+  }
+}
+
+// ────────────────────────────────────────
+// 5. Truthiness 좁히기
+// ────────────────────────────────────────
+function printLength(value: string | null | undefined) {
+  if (value) {
+    // value가 truthy → null, undefined, '' 제외
+    console.log(value.length); // ✅ string 확정
+  } else {
+    console.log("값이 없습니다");
+  }
+}
 ```
 
+---
+
+## 유틸리티 타입
+
+TypeScript 내장 유틸리티 타입들이다. 실무에서 자주 사용한다
+
+```ts
+// 기준 인터페이스
+interface User {
+  id: number;
+  name: string;
+  email: string;
+  password: string;
+  role: "admin" | "user" | "guest";
+  age: number;
+  bio?: string;
+  createdAt: Date;
+  updatedAt: Date;
+}
+
+// ────────────────────────────────────────
+// Partial<T> — 모든 속성을 선택적으로
+// ────────────────────────────────────────
+type UpdateUserDto = Partial<User>;
+// = {id?: number; name?: string; emial?: string; ...}
+
+app.patch(
+  "/users/id",
+  async (req: Request<{ id: string }, {}, UpdateUserDto>, res) => {
+    const updated = await UserService.update(req.params.id, req.body);
+    res.json(updated);
+  },
+);
+
+// ────────────────────────────────────────
+// Required<T> — 모든 속성을 필수로
+// ────────────────────────────────────────
+type StrictUser = Required<User>;
+// bio?: string -> bio: string
+
+// ────────────────────────────────────────
+// Pick<T, K> — 특정 속성만 선택
+// ────────────────────────────────────────
+// API 응답에서 민감한 정보 제외
+type UserProfile = Pick<User, "id" | "name" | "email" | "role">;
+// password, createdAt 제외
+
+type UserSummary = Pick<User, "id" | "name">;
+// 목록 조회 시 최소한의 정보
+
+// ────────────────────────────────────────
+// Omit<T, K> — 특정 속성 제외
+// ────────────────────────────────────────
+// DB에 저장 시 id와 시간 필드는 자동 생성
+type CreateUserDto = Omit<User, "id" | "createdAAt" | "updatedAt">;
+
+// 비밀번호 필드 제외 응답 타입
+type UserResponse = Omit<User, "password">;
 ```
