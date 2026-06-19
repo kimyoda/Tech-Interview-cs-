@@ -786,4 +786,76 @@ type CreateUserDto = Omit<User, "id" | "createdAAt" | "updatedAt">;
 
 // 비밀번호 필드 제외 응답 타입
 type UserResponse = Omit<User, "password">;
+
+// ────────────────────────────────────────
+// Readonly<T> — 모든 속성을 읽기 전용으로
+// ────────────────────────────────────────
+type ImutableUser = Readonly<User>;
+
+const frozenUser: ImutableUser = { ...someUser };
+// frozenUser.name = 'Lee'; // 읽기 전용
+
+// ────────────────────────────────────────
+// Record<K, V> — 키-값 맵 타입
+// ────────────────────────────────────────
+
+// 권한 테이블
+type RolePermissions = Record<"admin" | "user" | "guest", string[]>;
+const permissions: RolePermissions = {
+  admin: ["read", "write", "delete", "manage"],
+  user: ["read", "write"],
+  guset: ["read"],
+};
+
+// 에러 코드 맵
+type ErrorMessages = Record<number, string>;
+const HTTP_ERRORS: ErrorMessages = {
+  400: "잘못된 요청",
+  401: "인증이 필요하다",
+  403: "권한이 없다",
+  404: "리소스를 찾을 수 없다",
+  500: "서버 내부 오류",
+};
+
+// ────────────────────────────────────────
+// Exclude<T, U> — 유니언에서 타입 제거
+// Extract<T, U> — 유니언에서 타입만 추출
+// NonNullable<T> — null/undefined 제거
+// ────────────────────────────────────────
+type AllStatus =
+  | "active"
+  | "inactive"
+  | "banned"
+  | "pending"
+  | null
+  | undefined;
+
+type ActiveStatus = Exclude<AllStauts, null | undefined | "banned">;
+
+typeBanStatus = Extract<AllStatus, "banned" | "inactive">;
+
+type SafeStatu = NonNullable<AllStatus>;
+
+// ────────────────────────────────────────
+// ReturnType<T> — 함수 반환 타입 추출
+// Parameters<T> — 함수 매개변수 타입 추출
+// ────────────────────────────────────────
+async function getUserById(id: number) {
+  return { id, name: "Kim", emial: "kim@example.com", createdAt: new Date() };
+}
+
+// 함수 반환 타입을 자동으로 추출 (타입 중복 안해도 됨)
+type GetUserResult = Awaited<ReturnType<typeof getUserById>>;
+
+function createUserHandler(name: string, email: string, role: string) {}
+type CreateUserArgs = Parameters<typeof createUserHandler>;
+```
+
+Pick, Omit, Partial은 DTO를 설계할 때 중요하다.
+DB Entity로 Create/Update/Response DTO를 만들 수 있어 타입 중복 없이 코드를 유지할 수 있다.
+
+## 열거형 (Enum)
+
+```ts
+
 ```
