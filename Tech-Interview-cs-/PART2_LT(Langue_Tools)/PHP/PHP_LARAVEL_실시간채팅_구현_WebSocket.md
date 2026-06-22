@@ -95,4 +95,209 @@ chat-server/
     └── index.html      ← 클라이언트
 ```
 
+### 기본 Message ComponentInterface 구현
+
+```php
+<?php
+// src/Chat.php
+
+use Ratchet\MessageComponentInterface;
+use Ratchet\ConnectionInterface;
+
+class Chat implements MessageComponentInterface
+{
+    // 연결된 모든 클라이언트를 저장하는 SplObjectStorage
+    protected \SplObjectStorage $clients;
+
+    public function __construct()
+    {
+        $this->clients = new \SplObjectStorage();
+        echo "채팅 서버 시작\n";
+    }
+
+    // ────────────────────────────────────────
+    // 클라이언트 접속 시
+    // ────────────────────────────────────────
+    public function onOpen(ConnectionInterface $conn): void
+    {
+        $this->clients->attach($conn);
+
+        echo "새 연결: {$conn->resourceId}\n";
+        echo "현재 접속자 수: " . count($this->clients) . "\n";
+
+        // 환영 메시지 전송
+        $conn->send(json_encode([
+            'type'      => 'welcome',
+            'message'   => '채팅 서버에 접속했습니다',
+            'clientId'  => $conn->resourceId,
+            'timestamp' => date('c'),
+        ]));
+
+        // 접속자 수 전체 브로드캐스트
+        $this->broadcast([
+            'type'    => 'system',
+            'message' => "새 사용자가 접속했습니다 (총 " . count($this->clients) . "명)",
+        ], $conn);
+    }
+
+    // ────────────────────────────────────────
+    // 메시지 수신 시
+    // ────────────────────────────────────────
+    public function onMessage(ConnectionInterface $from, $msg): void
+    {
+        $data = json_decode($msg, true);
+
+        if (json_last_error() !== JSON_ERROR_NONE) {
+            $from->send(json_encode([
+                'type'    => 'error',
+                'message' => '잘못된 JSON 형식입니다',
+            ]));
+            return;
+        }
+
+        echo "메시지 수신 [{$from->resourceId}]: {$msg}\n";
+
+        // 메시지 타입별 처리
+        match ($data['type'] ?? 'chat') {
+            'chat'  => $this->handleChatMessage($from, $data),
+            'ping'  => $from->send(json_encode(['type' => 'pong'])),
+            default => $from->send(json_encode(['type' => 'error', 'message' => '알 수 없는 메시지 타입'])),
+        };
+    }
+
+    // ────────────────────────────────────────
+    // 연결 종료 시
+    // ────────────────────────────────────────
+    public function onClose(ConnectionInterface $conn): void
+    {
+        $this->clients->detach($conn);
+
+        echo "연결 종료: {$conn->resourceId}\n";
+        echo "남은 접속자: " . count($this->clients) . "\n";
+
+        $this->broadcast([
+            'type'    => 'system',
+            'message' => "사용자가 퇴장했습니다 (총 " . count($this->clients) . "명)",
+        ]);
+    }
+
+    // ────────────────────────────────────────
+    // 에러 발생 시
+    // ────────────────────────────────────────
+    public function onError(ConnectionInterface $conn, \Exception $e): void
+    {
+        echo "에러 [{$conn->resourceId}]: {$e->getMessage()}\n";
+        $conn->close();
+    }
+
+    // ────────────────────────────────────────
+    // 채팅 메시지 처리
+    // ────────────────────────────────────────
+    private function handleChatMessage(ConnectionInterface $from, array $data): void
+    {
+        if (empty($data['text'])) {
+            $from->send(json_encode(['type' => 'error', 'message' => '메시지를 입력하세요']));
+            return;
+        }
+
+        $payload = [
+            'type'      => 'chat',
+            'clientId'  => $from->resourceId,
+            'username'  => htmlspecialchars($data['username'] ?? '익명'),
+            'text'      => htmlspecialchars($data['text']),
+            'timestamp' => date('c'),
+        ];
+
+        // 전체 브로드캐스트 (본인 포함)
+        foreach ($this->clients as $client) {
+            $client->send(json_encode($payload));
+        }
+    }
+
+    // ────────────────────────────────────────
+    // 전체 브로드캐스트 헬퍼
+    // ────────────────────────────────────────
+    private function broadcast(array $data, ?ConnectionInterface $except = null): void
+    {
+        foreach ($this->clients as $client) {
+            if ($except === null || $client !== $except) {
+                $client->send(json_encode($data));
+            }
+        }
+    }
+}
+```
+
+### 서버 실행파일
+
+```php
+<?php
+// bin/server.php
+
+require dirname(__DIR__) . '/vendor/autoload.php';
+require dirname(__DIR__) . '/src/Chat.php';
+
+use Ratchet\Server\IoServer;
+use Ratchet\Http\HttpServer;
+use Ratchet\WebSocket\WsServer;
+
+$port = (int) ($argv[1] ?? 8080);
+
+$server = IoServer::factory(
+    new HttpServer(
+        new WsServer(
+            new Chat()
+        )
+    ),
+    $port
+);
+
+$server->run();
+```
+
+```bash
+# 서버 실행
+php bin/server.php 8080
+
+# 백그라운드 실행 (Linux)
+nohup php bin/server.php 8080 &
+
+# Supervisor로 프로세스 관리 (권장)
+# /etc/supervisor/conf.d/chat.conf
+[program:chat-server]
+command=php /var/www/chat/bin/server.php 8080
+autostart=true
+autorestart=true
+stderr_logfile=/var/log/chat-server.err.log
+stdout_logfile=/var/log/chat-server.out.log
+```
+
+---
+
+## Ratchet - 룸 기반 채팅 ㅅ허버
+
+### 채팅방 관리 클래스
+
+```php
+class ChatRoom
+{
+    private string $id;
+    private string $title;
+    private int $maxUsers;
+    private array $members = [];
+
+    public function __construct(string $id, string $title, int $maxUsers = 50)
+    {
+        $this->id = $id;
+        $this->title = $title;
+        $this->maxUsers = $maxUsers;
+    }
+
+    public function canJoin(): bool
+    {
+        return count($this->members) < $this->maxUsers;
+    }
+}
+```
+
 > 참고: Ratchet 공식 문서 | Swoole 공식 문서 | PHP 공식 문서 | Laravel WebSocket
