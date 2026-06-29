@@ -2,9 +2,7 @@
 
 ## 1. 프로젝트 개요
 
-### 1-1. 🐘 PHP 기본 특성 - "웹 개발의 든든한 동반자"
-
-해당 프로젝트는 **Unity 3D 모바일 게임 클라이언트**와 통신하는 **Laravel 11 기반 모바일 게임 백엔드 서버**이다.
+해당 프로젝트는 **Unity 3D 모바일 게임 클라이언트**와 통신하는 **NesjJS 기반 모바일 게임 백엔드 서버**이다.
 
 주요 역할은 다음과 같다.
 
@@ -14,71 +12,89 @@
 - 마스터 데이터 캐싱
 - 세션 및 공통 캐시 관리
 - 운영툴과 연동되는 게임 콘텐츠 처리
-- 클라이언트 개발자와 공유할 API 문서 관리
+- Swagger 기반 API문서 자동화(클라이언트 개발자, 기획 공유용)
 
 ---
 
 ## 2. 기술 스택
 
-| 구분                      | 기술                           |
-| ------------------------- | ------------------------------ |
-| Framework                 | Laravel 11                     |
-| Runtime                   | PHP 8.3 FPM                    |
-| Database                  | MySQL 8.0 InnoDB               |
-| Cache / Session / Ranking | Redis                          |
-| Infrastructure            | AWS EKS Production             |
-| Local Developement        | Docker, Laravel Sail, OrbStack |
-| Client                    | Unity3D Mobile Game            |
+| 구분                      | 기술                             |
+| ------------------------- | -------------------------------- |
+| Framework                 | NestJS(최신 안정 버전)           |
+| Runtime                   | Node.js 20 LTS                   |
+| Language                  | TypeScript 5.x(strict mode)      |
+| Database                  | MySQL 8.0 InnoDB                 |
+| ORM                       | TypeORM                          |
+| Cache / Session / Ranking | Redis                            |
+| Infrastructure            | AWS EKS Production               |
+| Local Developement        | Docker, docker-compose, OrbStack |
+| Client                    | Unity3D Mobile Game              |
 
 ---
 
 ## 3. 핵심 실행 규칙
 
-로컬 호스트 환경에 PHP가 없어, 모든 PHP 관련 명령어는 반드시 Docker 컨테이너 내부에서 실행해야 한다
-
-따라서 `php`, `artisan`, `phpunit`, `composer` 명령어는 직접 실행하지 않고 반드시 `./vendor/bin/sail`을 접두어로 사용한다.
+모든 명령어는 프로젝트 루트에서 실행한다.
+Docker 환경을 사용하는 경우 `docker-compose exec app`을 접두어로 붙인다.
 
 ### 명령어 예시
 
 ```bash
-./vendor/bin/sail artisan test
+# 의존성 설치
+npm install
+
+# 개발 서버 실행
+npm run start:dev
+
+# 프로덕션 빌드
+npm run build
+
+# 프로덕션 실행
+npm run start:prod
+
+# 전체 테스트 실행
+npm run test
+
+# 특정 테스트 실행
+npm run test -- --testPathPattern={path}
+
+# e2e 테스트 실행
+npm run test:e2e
+
+# 커버리지 확인
+npm run test:cov
 ```
 
-```bash
-./vendor/bin/sail phpunit {path}
-```
+Docker 환경에서 실행하는 경우:
 
 ```bash
-./vendor/bin/sail composer install
-```
-
-```bash
-./vendor/bin/sail artisan migrate
+docker-compose exec app npm run start:dev
+docker-compose exec app npm run test
 ```
 
 ---
 
 ## 4. 로컬 개발 명령어
 
-### 로컬 환경 빌드 및 실행
+로컬 환경 빌드 및 실행
 
 ```bash
-./vendor/bin/sail up -d --build
+docker-compose up -d --build
 ```
 
-### 전체 테스트 실행
+전체 테스트 실행
 
 ```bash
-./vendor/bin/sail artisan test
+npm run test
 ```
 
-### 특정 테스트 실행
+특정 테스트 실행
 
 ```bash
-./vendor/bin/sail phpunit {path}
+npm run test -- --testPathPattern={path}
 ```
 
-### 테스트용 최신 마스터 데이터 가져오기
+테스트용 최신 마스터 데이터 가져오기
 
 ```bash
 ./sync_master_fixtures.sh
@@ -86,72 +102,112 @@
 
 ---
 
-## 5. Protocol-Handler 패턴
+## 5. Module-Controller-Service 패턴
 
-프로젝트는 URI 규칙에 따라 Protocol Handler 클래스를 매핑한다
-
-예를 들어 API URL가 다음과 같으면,
+프로젝트는 NestJS의 모듈 시스템을 기반으로 URI 규칙에 따라 Controller와 Service 클래스를 매핑한다.
 
 ```text
-/api/cheering_ranking/get_data
+POST /api/cheering-ranking/get-data
 ```
 
-핸들러 클래스는 다음 위치에 있어야 한다
+컨트롤러 클래스는 다음 위치에 있어야 한다.
 
 ```text
-App\Protocols\CheeringRanking\GetDataHandler
+src/cheering-ranking/cheering-ranking.controller.ts
 ```
 
-즉, URI 구조는 `Util:getProtocoNameFromUri` 규칙을 따른다.
+모듈 구조는 다음과 같다.
+
+```text
+src/
+└── cheering-ranking/
+    ├── cheering-ranking.module.ts
+    ├── cheering-ranking.controller.ts
+    ├── cheering-ranking.service.ts
+    ├── dto/
+    │   ├── get-data.request.dto.ts
+    │   └── get-data.response.dto.ts
+    └── cheering-ranking.service.spec.ts
+```
 
 ---
 
-## 6. Handler 작성 규칙
+## 6. Controller 작성 규칙
 
-모든 Handler 클래스는 `ProtocolBase`를 상속받아야 한다. 또한 다음 메서드를 구현해야 한다.
+모든 Controller 클래스는 NestJS의 `@Controller()` 데코레이터를 사용한다.
 
-```php
-handle(RequestCommon $commonRequest, array $request)
-```
+**Controller의 주요 이슈**
+Controller는 API 요청의 진입점 역할을 한다.
 
-### Handler의 주요 책임
-
-Handler는 API 요청의 진입점 역할을 한다
-
-주요 책임은 다음과 같다.
-
-- 요청 데이터 수신
+- 요청 데이터 수신 및 DTO 유효성 검사
 - 공통 요청 객체 확인
-- Service Layer 호출
-- 응답 객체 생성
-- 비즈니스 오류 처리
+- ServiceLayer 호출
+- 응답 객체 반환
+- 비지니스 오류 처리
 - 유저 액션 로그 기록
 
-복잡한 비지니스 로직은 Handler에 직접 작성하지 않고, Service Layer로 분리한다.
+단, 복잡한 비지니스 로직은 Controller에 직접 작성하지 않고 ServiceLayer로 분리한다.
+
+Controller 예시
+
+```ts
+@ApiTags("cheering-ranking")
+@Controller("cheering-ranking")
+export class CheeringRankingController {
+  constructor(
+    private readonly cheeringRankingService: CheeringRankingService,
+    private readonly userLogger: UserLogger,
+  ) {}
+
+  @Post("get-data")
+  @ApiOperation({ summary: "응원 랭킹 데이터 조회" })
+  @ApiResponse({ status: 200, type: GetDataResponseDto })
+  async getData(
+    @CommonReq() commonRequest: CommonRequest,
+    @Body() dto: GetDataRequestDto,
+  ): Promise<GetDataResponseDto> {
+    const result = await this.cheeringRankingService.getData(
+      commonRequest,
+      dto,
+    );
+    this.userLogger.log(commonRequest, UserAction.CHEERING_RANKING_GET_DATA);
+    return result;
+  }
+}
+```
 
 ---
 
-## 7. Service Layer 규칙
+## 7. ServiceLayer 규칙
 
-비지니스 로직은 `app/Services` 하위에 작성한다
-도메인별로 디렉터리를 나누어 관리한다. 예시는 다음과 같다
+비지니스 로직은 각 도메인 모듈의 Service 클래스에 작성한다.
+도메인 별로 디렉터리를 나누어 관리한다.
 
 ```text
-app/
-└── Services/
-    ├── Mini/
-    ├── Ranking/
-    ├── CheeringRanking/
-    └── Master/
+src/
+├── mini/
+│   ├── mini.module.ts
+│   ├── mini.controller.ts
+│   └── mini.service.ts
+├── ranking/
+│   ├── ranking.module.ts
+│   ├── ranking.controller.ts
+│   └── ranking.service.ts
+├── cheering-ranking/
+│   ├── cheering-ranking.module.ts
+│   ├── cheering-ranking.controller.ts
+│   └── cheering-ranking.service.ts
+└── master/
+    ├── master.module.ts
+    └── master.service.ts
 ```
 
-### Service Layer 역할
+### ServiceLayer의 역할
 
-Service에 실제 비즈니스 로직을 담당한다
+Service는 실제 비즈니스 로직을 담당한다
+다음과 같은 처리를 Service에서 수행한다.
 
-다음과 같은 처리를 Service에 수행한다
-
-- 유저 데이터 조회
+- 유저데이터 조회
 - 점수 계산
 - 랭킹 등록
 - 보상 지급
@@ -164,46 +220,55 @@ Service에 실제 비즈니스 로직을 담당한다
 
 ## 8. 의존성 주입 DI 규칙
 
-Service Layer에 의존성 주입을 적극 활용한다.
+NestJS의 DI 컨테이너를 적극 활용한다.
+이를 통해 테스트하기 쉬운 구조를 만든다.
+Controller가 직접 Repository나 Redis를 다루기 보다, Serivce를 주입받아 처리 흐름을 위임한다.
 
-테스트하기 쉬운 구조를 만든다.
-
-Handler가 직접 모델이나 Redis를 다루기보다 Service를 주입받아 처리 흐름을 위이만다
-
-### 구조 에시
+구조 예시
 
 ```text
-Handler
+Controller
   ↓
 Service
   ↓
-Repository / Model / Redis / MasterSerivce
+Repository / TypeORM Entity / Redis / MasterService
 ```
 
-해당 구조를 사용하면 다음 장점이 있다
+이 구조를 사용하면 다음 장점이 있다.
 
-- Handler가 얇아짐
-- 비지니스 로직 재사용 가능
-- 테스트 코드 작성이 쉬워진다
-- Mock 처리 가능
+- Controller가 얇아진다
+- 비지니스 로직 재사용이 가능하다
+- 테스트 코드 작성이 쉬워진다(Jest Mock 처리 가능)
 - 책임 분리가 명확해진다
 
 ---
 
-## 9. Strict Typing & Modern PHP 규칙
+## 9. Strict Typing & Modern TypeScript 규칙
 
-PHP 8.3 문법을 기준으로 엄격한 탕입 사용을 권장한다
+TypeScript strict mode를 기준으로 엄격한 타입 사용을 권장한다.
+tsconfig 핵심 설정
 
-### 기본 규칙
+```json
+{
+  "compilerOptions": {
+    "strict": true,
+    "strictNullChecks": true,
+    "noImplicitAny": true,
+    "strictPropertyInitialization": true
+  }
+}
+```
 
-- 파라미터 타입 명시
+기본 규칙
+
+- 파라미터 타입 명시(`any` 사용 금지)
 - 리턴 타입 명시
+- `interface`또는 `class`로 구조 명확하
 - 가능하면 `readonly` 프로퍼티 사용
-- 가능하면 생성자 홍보 문법 사용
-- 불필요한 동적 프로퍼티 사용 지망
-- 배열 구조가 복잡한 경우 Struct 사용 고려
+- 불필요한 동적 프로퍼티 사용 지양
+- 배열 구조가 복잡한 경우 별도 타입 정의 사용
 
-### 권장 방향
+권장 방향
 
 ```text
 명확한 타입
@@ -214,80 +279,113 @@ PHP 8.3 문법을 기준으로 엄격한 탕입 사용을 권장한다
 
 ---
 
-## 10. Structs & Response 규칙
+## 10. DTO & Response 규칙
 
-응답 객체는 `BaseResponse`를 상속받는다
+요청 데이터는 `class-validator`를 사용한 DTO 클래스로 검증한다
+응답 데이터는 Response DTO 클래스로 명확한게 정의한다.
+모든 DTO에 반드시 `@ApiProperty()` 데코레이터를 함께 적용한다
 
-데이터 구조체는 `BaseStruct`를 상속받는다
-
-### Response 규칙
-
-```text
-App\Responses\{Domain}\{Name}Response
-```
-
-응답 객체는 API 응답의 최상위 구조를 담당한다
-
-### Struct 규칙
+Response 규칙
 
 ```text
-App\Structs\{Domain}\{Name}Data
+src/{domain}/dto/{name}.response.dto.ts
 ```
 
-Struct는 응답 내부의 세부 데이터 구조를 담당한다
+응답 DTO는 API 응답의 최상위 구조를 담당한다.
+
+Request 규칙
+
+```text
+src/{domain}/dto/{name}.request.dto.ts
+```
+
+DTO 작성 예시
+
+```ts
+// 요청 DTO
+export class GetDataRequestDto {
+  @ApiProperty({ description: "유저 ID", example: 12345 })
+  @IsNumber()
+  @IsNotEmpty()
+  userId: number;
+
+  @ApiProperty({ description: "시즌 코드", required: false })
+  @IsString()
+  @IsOptional()
+  season?: string;
+}
+
+// 응답 DTO
+export class GetDataResponseDto {
+  @ApiProperty({ description: "유저 ID", example: 12345 })
+  userId: number;
+
+  @ApiProperty({ description: "랭킹 데이터", type: RankingDataDto })
+  rankingData: RankingDataDto;
+}
+```
 
 ---
 
-## 11. Camle Case / Snake Case 반환 규칙
+## 11. Camel Case / Snake Case 변환 규칙
 
-`BaseResponse`와 `BaseStruct`는 내부적으로 카멜케이스 프로퍼티를 응답 시 스네이크케이스 키로 자동 변환한다.
-PHP 클래스 내부에서 카멜케이스를 사용한다
+TypeScript 클래스 내부에서 camelCase를 사용한다
+클라이언트로 응답할 때 snake_case로 변환하여 내려보낸다.
+변환은 `class-transformer`의 `@Expose()`, `@Transform()` 또는 글로벌 `ClassSerializerInterceptor`를 활용한다.
 
-### 클래스 내부
+클래스 내부
 
-```text
-buyPlayCountData
+```ts
+buyPlayCountData: BuyPlayCountDto;
 ```
 
-### 실제 API 응답
+실제 API 응답
 
-```text
-buy_play_count_data
+```json
+{
+  "buy_play_count_data": { ... }
+}
 ```
 
-개발자는 PHP 코드에서 카멜케이스를 유지, 클라이언트 응답에서 스네이크케이스로 내려가는 구조이다.
+개발자는 TypeScript 코드에서 camelCase를 유지하고, 응답에서 snake_case로 내려가는 구조다.
 
 ---
 
-## 12. Exception Handling 규칙
+## 12. Exception Handing 규칙
 
-비즈니스 로직 오류는 기본 Exception을 직접 사용하지 ㅇ낳고 프로젝트 공통 예외 클래스를 사용한다
+비지니스 로직 오류는 기본 `Error`를 직접 사용하지 않고 프로젝트 공통 예외 클래스를 사용한다.
 
-### 사용 클래스
+사용 클래스
 
 ```text
-App\Exceptions\CustomException
-App\Enums\ErrorCode
+src/common/exceptions/custom.exception.ts
+src/common/enums/error-code.enum.ts
 ```
 
-### 사용 목적
+사용 예시
+
+```ts
+throw new CustomException(ErrorCode.INSUFFICIENT_PLAY_COUNT);
+```
+
+사용 목적
 
 - 에러 코드 일관성 유지
 - 클라이언트 응답 코드 통일
 - 운영 및 QA 단계에서 오류 추적 용이
-- API 문서와 에러 코드 목록 동기화
+- Swagger 문서와 에러 동기화
 
 ---
 
-## 13. Logging 규칙
+## 13 Logging 규칙
 
-유저 액션 로그는 다음 Helper를 사용한다
+유저 액션 로그는 다음 Provider를 사용한다.
 
 ```text
-pp\Helpers\UserLogger
+src/common/helpers/user-logger.service.ts
 ```
 
-### 로그 기록 대상 예시
+로그 기록 대상 예시
 
 - 미니게임 플레이 시작
 - 미니게임 결과 저장
@@ -297,269 +395,60 @@ pp\Helpers\UserLogger
 - 랭킹 등록
 - 주요 콘텐츠 진입
 
-로그는 추후 CS, 운영툴, 장애 분석, 유저 이슈 확인에 활용될 수 있으므로 중요한 유저 액션에 반드시 기록 여부를 검토한다
+로그는 추후 CS, 운영툴, 분석, 유저 이슈 확인에 활용 될 수 있으므로 중요한 유저 액션에 반드시 기록 여부를 검토한다.
 
 ---
 
 ## 14. 데이터베이스 규칙
 
-해당 프로젝트는 여러 DB connection을 사용한다
+여러 TypeORM DataSoruce(Connection)을 사용한다
+연결은 다음과 같다.
 
-주요 연결은 다음과 같다
+| DataSource        | 용도          |
+| ----------------- | ------------- |
+| userDataSource    | 유저 데이터   |
+| rankingDataSource | 랭킹 데이터   |
+| manageDataSource  | 운영툴 데이터 |
+| masterDataSource  | 마스터 데이터 |
 
-| Connection | 용도          |
-| ---------- | ------------- |
-| user       | 유저 데이터   |
-| ranking    | 랭킹 데이터   |
-| manage     | 운영툴 데이터 |
-| master     | 마스터 데이터 |
-
-모델을 작성할 때는 반드시 `$connection`을 설정을 확인해야 한다.
+Entity를 작성할 때 반드시 어떤 DataSource에 등록되는지 확인한다
 
 ---
 
-## 15. Model Connection 규칙
+## 15. Entity / DataSource 연결 규칙
 
-Multi-Connection 구조에서는 모델이 어떤 DB에 연결되는지가 매우 중요합니다.
+Multi-DataSource 구조에서 Entity가 어떤 DB에 연결되는 지 매우 중요하다
+예를 들어 유저 데이터 Entity는 `useDataSource`에 등록하고, 랭킹 데이터 Entity는 `rankingDataSource`에 등록해야한다.
+잘못된 DataSource를 사용할 경우 다음 문제가 발생할수 있다.
 
-유저 데이터 모델은 `user` connection을 사용, 랭킹 데이터 모델은 `ranking` connection을 사용해야 한다
-
-잘못된 connection을 사용할 경우 다음 문제가 발생할 수 있다
-
-- 테이블을 찾지 못한다
+- 테이블을 찾지 못함
 - 다른 DB에 데이터가 저장된다
-- 테스트 환경에서 Transction이 적용되지 않는다
+- 테스트 환경에서 Transaction이 적용되지 않는다
 - 운영 데이터와 테스트 데이터가 섞인다
 - 조회 결과가 예상과 다르게 나온다
+
+DataSource 예시
+
+```ts
+export const userDataSource = new DataSource({
+  name: "user",
+  type: "mysql",
+  entities: [UserEntity, UserItemEntity],
+});
+```
 
 ---
 
 ## 16. Migration 규칙
 
-마이그레이션은 본 프로젝트가 아닌 관리자 프로젝트에서 관리한다.
+마이그레이션은 mgmt에서 관리한다
 
-관리자 프로젝트 경로는 다음과 같다
+스키마 수정이 푤요한 경우 직접 마이그레이션을 추가하기 전 관리자 프로젝트와 관계를 확인해야 한다.
 
-```text
-/26_example_mgmt
-```
-
-따라서 본 프로젝트에서 스키마 수정이 필요한 경우
-직접 마이그레이션을 추가하기 전에 프로젝트와의 관계를 확인해야 한다
-
-### 주의사항
-
-- API 서버 프로젝트에서 임의로 스키마를 수정하지 않기
-- 운영툴과 공유되는 테이블인지 확인
-- 마이그레이션 위치가 올바른지 확인
-- 테스트 코드에서 필요한 테이블이 있는지 확인
-- 운영 반영 순서를 확인
+- API 서버 프로젝트에 임의로 스키마를 수정하지 않는다
+- 운영툴과 공유되는 테이블인지 확인한다
+- 마이그레이션 위치가 올바른지 확인한다
+- 테스트 코드에서 필요한 테이블이 있는지 확인한다
+- 운영 반영 순서를 확인한다
 
 ---
-
-## 17. Master Data 규칙
-
-마스터 데이터 조회 시 DB를 직접 조회하지 않고, 다음 서비스를 통해 Redis 캐싱된 데이터를 사용한다
-
-```text
-App\Service\MasterService::get()
-```
-
-### MasterService 사용 이유
-
-- DB 직접 조회 최소화
-- Redis 캐시 활용
-- 게임 서버 응답 속도 개선
-- 마스터 데이터 접근 방식 통일
-- 테스트 및 운영 환경에서 동일한 조회 흐름 유지
-
----
-
-## 18. Redis 사용 영역
-
-Redis는 다음 용도로 사용된다
-
-| 용도                | 설명                     |
-| ------------------- | ------------------------ |
-| Master Data Caching | 마스터 데이터 캐싱       |
-| Session             | 세션 관리                |
-| Shared Data Caching | 공통 데이터 캐싱         |
-| Ranking Data        | 랭킹 데이터 저장 및 조회 |
-
-Redis 접근 시에 용도에 맞는 connection과 Key 설계를 확인해야 한다.
-
----
-
-## 19. 테스트 규칙
-
-테스트는 `TestCase`에서 `DatabaseTransactions`을 사용한다
-
-다음 DB 연결을 사용하는 프로젝트로 `$connectionsToTransact`에 모든 활성 connection이 포함되어 있는지 확인해야 한다
-
-### 확인 대상
-
-```text
-user
-ranking
-manage
-master
-```
-
-누락된 connection이 있을 경우 테스트 후 데이터가 롤백되지 않을 수 있다.
-
----
-
-## 20. 테스트 데이터 생성 규칙
-
-팩토리가 있는 경우 Factory를 사용할 수 있다.
-
-팩토리가 없는 경우 모델의 `create()` 메서드를 사용해야 직접 테스트 데이터를 생성한다
-이때 반드시 모델의 DB connection이 올바른지 확인해야 한다
-
-### 주의 사항
-
-- 테스트용 데이터가 어느 DB에 들어가는 지 확인
-- connection 설정 확인
-- Transction 대상 connection에 포함되어 있는 지 확인
-- 마스터 데이터가 필요한 경우 fixture 확인
-- Redis 캐시 상태 확인
-
----
-
-## 21. Fixtures 규칙
-
-테스트용 마스터 데이터는 TSV fixture를 사용
-초신 마스터 데이터를 가져오기 위해 다음 스크립터를 사용한다
-
-```bash
-./sync_master_fixtures.sh
-```
-
-Fixture가 오래된 경우 테스트 결과가 실제 운영 데이터 기준과 달라질 수 있다
-
----
-
-## 22. 문서화 규칙
-
-문서는 클라이언트 개발자와 공유하기 위한 목적으로 작성한다
-문서 저장 경로는 doc를 사용한다
-
----
-
-## 23. API 문서 작성 규칙
-
-다음과 같은 기준으로 작성한다
-
-```text
-00_api_template.md
-```
-
-파일명은 다음 형식을 사용한다
-
-```text
-[컨텐츠명]_[핸들러명].md
-```
-
-예시는 다음과 같습니다.
-
-```text
-cheering_ranking_get_data.md
-mini_dracon_top.md
-mini_buy_play_count.md
-```
-
-API 목록은 다음 파일에서 관리합니다.
-
-```text
-00_api_list.md
-```
-
----
-
-## 24. 공통 객체 문서
-
-공통 객체는 다른 파일에 정리한다
-
-```text
-00_common_object.md
-```
-
-여러 API에서 반복적으로 사용하는 객체는 개별 API 문서마다 중복 작성하지 않고 공통 객체 문서에 정의한다
-
----
-
-## 25. 응답 코드 및 오류 코드 문서
-
-응답 코드와 오류 코드는 다음 파일에 정리한다
-
-```text
-00_result_code_list.md
-```
-
-기준이 되는 코드는 다음 파일이다.
-
-즉, 에러코드에 정의된 내용을 기준으로 문서의 오류 코드 목록도 함께 관리해야 한다.
-
----
-
-## 26. 전에 요청 처리 흐름
-
-일반적인 API 요청 흐름은 다음과 같다
-
-```text
-Unity Client
-  ↓
-Laravel Route / API Entry
-  ↓
-Protocol Resolver
-  ↓
-Protocol Handler
-  ↓
-Service Layer
-  ↓
-Model / Redis / MasterService
-  ↓
-Response /Struct
-  ↓
-Unity Client
-```
-
----
-
-## 27. 개발 시 체크리스트
-
-### Handler 작성 시
-
-- URI 규칙에 맞는 namespace인지 확인
-- `ProtocolBase`를 상속했는 지 확인
-- `handle(RequestCommon $commonRequest, array $request)`를 구현했는 지 확인
-- 비즈니스 로직이 Handler에 과도하게 들어가지 않았는 지 확인
-- Response 객체를 사용했는 지 확인
-
-### Service 작성 시
-
-- `app/Services/{Domain}` 하위에 위치하는 지 확인
-- 의존성 주입이 가능한 구조인지 확인
-- 테스트 가능한 단위로 분리되어 있는지 확인
-- DB, Redis, MasterService 접근 책임이 명확한지 확인
-
-### Model 작성 시
-
-- `$connection`이 올바른지 확인
-- 테이블명이 명확인지 확인
-- Multi-Connection 환경에서 잘못된 DB를 바라보지 않는 지 확인
-
-### 테스트 작성 시
-
-- `./vendor/bin/sail` 명령어로 실행하는 지 확인
-- 필요한 connection이 `$connectionToTransact`에 포함되어 있는 지 확인
-- fixture가 최신인지 확인
-- 테스트 데이터의 DB connection이 올바른지 확인
-
-### 문서 작성 시
-
-- `00_api_template.md` 기준으로 작성했는지 확인
-- 파일명이 `[컨텐츠명]_[핸들러명].md` 형식인지 확인
-- `00_api_list.md`에 추가했는지 확인
-- 공통 객체는 `00_common_object.md`에 정리했는지 확인
-- 오류 코드는 `00_result_code_list.md`에 반영했는지 확인
