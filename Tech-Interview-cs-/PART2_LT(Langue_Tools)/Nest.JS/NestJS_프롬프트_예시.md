@@ -452,3 +452,63 @@ export const userDataSource = new DataSource({
 - 운영 반영 순서를 확인한다
 
 ---
+
+## 17. MasterService 사용 이유
+
+- DB 직접 조회 최소화
+- Redis 캐시 활용
+- 게임 서버 응답 속도 개선
+- 마스터 데이터 접근 방식 통일
+- 테스트 및 운영 환경에서 동일한 조회 흐름 유지
+
+---
+
+## 18. Redis 사용 영역
+
+Redis는 다음 용도로 사용된다.
+| 용도 | 설명 |
+|---|---|
+| Master Data Catching | 마스터 데이터 캐싱 |
+| Session | 세션 관리 |
+| Shared Data Caching | 공통 데이터 캐싱 |
+| Ranking Data | 랭킹 데이터 저장 및 조회 |
+
+Redis 클라이언트는 `ioredis` 사용, NestJS 모듈로 래핑하여 의존성 주입 방식으로 사용한다.
+Redis 접근 시에 용도에 맞는 conection과 key 설계를 확인해야 한다
+
+Redis 모듈 등록
+
+```ts
+// src/common/redis/redis.module.ts
+@Module({
+  providers: [
+    {
+      provide: "REDIS_CLIENT",
+      useFactory: () =>
+        new Redis({
+          host: process.env.REDIS_HOST,
+          port: Number(process.env.REDIS_PORT),
+        }),
+    },
+  ],
+  exports: ["REDIS_CLIENT"],
+})
+export class RedisModule {}
+```
+
+Redis 주입 및 사용
+
+```ts
+@Injectable()
+export class RankingService {
+  constructor(@Inject("REDIS_CLIENT") private readonly redis: Redis) {}
+
+  async getRanking(key: string): Promise<string | null> {
+    return this.redis.get(key);
+  }
+}
+```
+
+---
+
+## 19. 테스트 규칙
