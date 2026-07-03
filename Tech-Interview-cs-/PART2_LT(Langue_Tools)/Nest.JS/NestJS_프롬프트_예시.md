@@ -512,3 +512,63 @@ export class RankingService {
 ---
 
 ## 19. 테스트 규칙
+
+테스트는 Jest를 사용한다
+
+다중 DataSource 구조로 각 테스트에서 사용하는 DataSource가 올바르게 초기화 테스트 후 데이터가 롤백되는 지 확인해야 한다
+
+확인대상 DataSource
+
+```text
+userDataSource
+rankingDataSource
+manageDataSource
+masterDataSource
+```
+
+누락된 DataSource가 있을 경우 테스트 후 데이터가 롤백되지 않을 수 있다
+
+트랜잭션 롤백 처리
+
+```ts
+beforeEach(async () => {
+  await userDataSource.query("START TRANSACTION");
+  await rankingDataSource.query("START TRANSACTION");
+});
+
+afterEach(async () => {
+  await userDataSource.query("ROLLBACK");
+  await rankingDataSource.query("ROLLBACK");
+});
+```
+
+---
+
+## 20. 테스트 데이터 생성 규칙
+
+팩토리가 있는 경우 Factory를 사용할 수 있다
+팩토리가 없는 경우 Respository의 `save()` 메서드르 사용 직접 테스트 데이터를 생성한다.
+이때 DataSource의 Repository를 사용하는 지 확인해야 한다
+
+- 테스트용 데이터가 어느 DB에 들어가는지 확인
+- DataSource 연결 설정 확인
+- Transaction 롤백 대상 DataSource에 포함되어 있는지 확인
+- 마스터 데이터가 필요한 경우 fixture 확인
+- Redis 캐시 상태 확인
+
+---
+
+## 21. Fixtures 규칙
+
+테스트용 마스터 데이터는 TSV fixture를 사용한다
+최신 마스터 데이터를 가져오기 위해 다음 스크립트를 사용한다.
+
+```bash
+./sync_master_fixtures.sh
+```
+
+Fixture가 앨된 경우 테스트 결과가 실제 운영 데이터 기준과 달라질 수 있다.
+
+---
+
+## 22. 문서화 규칙
