@@ -135,6 +135,23 @@ nonBlockingRead();
 
 ### 싱글 스레드
 
+Node.js의 자바스크립트 실행 자체는 **단일 스레드**에서 이뤄진다. 내부적으로 `libuv`가 별도의 스레드풀을 사용해 I/O 작업을 처리한다.
+
+```ts
+// src/single-thread-trap.ts
+
+// 집약적인 작업은 싱글 스레드를 블로킹 시킨다
+function heavyComputation(): number {
+  let result = 0;
+  for (let i = 0; i < 10_000_000_000; i++) {
+    result += 1;
+  }
+  return result;
+}
+// 해당 함수가 실행되는 동안 서버는 다른 요청을 처리할 수 없다
+// Worker Threads나 별도 프로세스로 분리 되어야 한다
+```
+
 ## 참고 자료
 
 - [Node.js 공식 사이트](https://nodejs.org/ko)
