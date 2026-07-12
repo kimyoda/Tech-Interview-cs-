@@ -114,6 +114,100 @@ const lastActive = users.findLast((u) => u.active);
 const sorted = arr.toSorted((a, b) => b - a); // 원본 arr은 변경 안됨
 ```
 
+### TypeScript 고급 과정
+
+```ts
+// src/advanced-types.ts
+
+// Utility Types -
+interface User {
+  id: number;
+  name: string;
+  email: string;
+  password: string;
+}
+
+// 특정 필드만
+type PublicUser = Omit<User, "password">;
+
+// 특정 필드만 추출
+type UserCredentials = Pick<User, "email" | "password">;
+
+// 모든 필드를 선택적으로
+type PartialUser = Partial<User>;
+
+// 모든 필드를 필수로
+type RequireUser = Required<PartialUser>;
+
+// 조건부 타입(Conditional Types)
+type IsString<T> = T extends string ? true : false;
+type A = IsString<string>; // true
+type B = IsString<number>; // false
+
+// 템플릿 리터럴 타입 - API 라우트 정의
+type HttpMethod = "GET" | "POST" | "PUT" | "DELETE";
+type ApiRoute = `/api/${string}`;
+
+function request(method: HttpMethod, route: ApiRoute): void {
+  console.log(`${method} ${route}`);
+}
+
+request("GET", "/api/users");
+
+// satisfies 연산자
+const config = {
+  host: "localhost",
+  port: 3000,
+} satisfies Record<string, string | number>;
+```
+
+### 구조화된 동시성 (Promise.allSettled, AbortController)
+
+```ts
+// src/concurrency.ts
+
+// Promise.all - 하나라도 실패하면 전체 reject
+async function fetchAllOrNothing(urls: string[]): Promise<Response[]> {
+  return Promise.all(urls.map(url) => fetch(url));
+}
+
+// Promise.allSettled - 일부 실패라도 결과를 모두 받는다
+interface SettledResult<T> {
+  status: 'fulfilled' | 'rejected';
+  value?: T;
+  reason?: unknown;
+}
+
+async function fetchAllSettled(urls: string[]): Promise<void> {
+  const results = await Promise.allSettled(urls.map((url) => fetch(url)));
+
+  results.forEach((result, index) => {
+    if (result.status === 'fulfilled') {
+      console.log(`${urls[index]} 성공:`, result.value.status);
+    } else {
+      console.error(`${urls[index]} 실패:`, result.reason);
+    }
+  });
+}
+
+// Promise.race - 가장 먼저 완료되는 것만 사용 (타임아웃 구현에 자주 사용)
+function withTimeout<T>(promise: Promise<T>, ms: number): Promise<T> {
+  const timeout = new Promise<never>((_, reject) => {
+    setTimeout(() => reject(new Error('타임아웃')), ms);
+  });
+  return Promise.race([promise, timeout]);
+}
+
+// AbortController로 요청 취소
+async function fetchWithCancel(url: string): Promise<{ cancel: () => void; result: Promise<Response>}> {
+  const controller = new AbortController();
+  const result = fetch(url, { signal: controller.signal });
+  return {
+    cancel: () => controller.abort(), result
+  };
+}
+```
+
 ## 참고 자료
 
 - [Node.js 공식 사이트](https://nodejs.org/ko)
