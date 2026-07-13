@@ -208,6 +208,35 @@ async function fetchWithCancel(url: string): Promise<{ cancel: () => void; resul
 }
 ```
 
+### Top-level await
+
+```ts
+// src/top-level-await
+// ESM 환경(module: "NodeNext" 등)에는 최상위에서 await 사용 가능
+
+// CommonJS에서 사용 불가 - async 함수로
+// ESM에서 사용 가능
+interface Config {
+  apiUrl: string;
+}
+
+async function loadConfig(): Promise<Config> {
+  // 비동기로 읽는다고 가정
+  return { apiUrl: "https://api.example.com" };
+}
+
+const config: Config = await loadConfig();
+console.log("설정 로드 완료:", config.apiUrl);
+```
+
+```
+Top-level awai 사용
+
+package.json: "type": "module" + tsconifg.json: module: "NodeNext" + 최상위 await
+```
+
+---
+
 ## 참고 자료
 
 - [Node.js 공식 사이트](https://nodejs.org/ko)
