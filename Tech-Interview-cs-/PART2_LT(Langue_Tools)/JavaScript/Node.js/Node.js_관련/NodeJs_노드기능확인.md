@@ -165,6 +165,107 @@ console.log(__dirname); // 자동 제공
 
 ### global
 
+```ts
+// src/global-object.ts
+
+// global 객체에 값 등록 (지양해야 함 알아둘 필요는 있다)
+declare global {
+  // eslint-disable-next-line no-var
+  var appConfig: { version: string };
+}
+
+global.appConfig = { version: "1.0.0" };
+console.log(global.appConfig.version);
+```
+
+> `global` 객체 직접 사용은 테스트하기 어렵고 의존성을 추적하기 힘들게 만든다. 설정값은 환경변수나 의존성 주입(DI)패턴으로 관리하는 것이 좋다.
+
+### console
+
+```ts
+// src/console-methods.ts
+
+console.log("일반 로그");
+console.log("에러 로그");
+console.log("경고 로그");
+console.log("정보 로그");
+
+// 시간 측정
+console.time("작업시간");
+for (let i = 0; i < 1_000_000; i++) {} // 임의 작업
+console.timeEnd("작업시간");
+
+// 표 형태로 출력 (배열/객체 디버깅에 유용)
+interface User {
+  id: number;
+  name: string;
+}
+
+const users: User[] = [
+  { id: 1, name: "홍길동" },
+  { id: 2, name: "김요한" },
+];
+console.table(users);
+
+// 호출 스택 추적
+function a(): void {
+  b();
+}
+function b(): void {
+  console.trace("호출 스택");
+}
+a();
+
+// 카운터
+console.count("호출횟수");
+console.count("호출횟수");
+```
+
+## 타이머
+
+```ts
+// src/timers.tws
+
+// setTimeout / clearTimeout
+const timeoutId: NodeJS.Timeout = setTimeout(() => {
+  console.log('3초 후 실행');
+}, 3000);
+
+// clearTimeout(timeoutiD); // 필요시 취소
+
+// setINterval / clearInterval
+let count = 0;
+const intervalId: NodeJS.Timeout = setInterval(() => {
+  count += 1;
+  console.log(`${count}번째 실행`);
+  if (count >= 3) {
+    clearInterval(intervalId);
+  }
+}, 3000);
+
+// setImmediate - 현재 이벤트 루프 턴이 끝난 직후 실행
+setImmediate(() => {
+  console.log(*'setImmediate 실행');
+});
+
+// process.nextTick - 현재 작업이 끝난 즈식 실행
+process.nextTick(() => {
+  console.log('nestTick 실행 (가장 먼저');
+});
+```
+
+```
+실행 순서
+
+동기 코드 -> process.nextTick -> Promise -> setTimeout/setInterval -> setImmediate -> I/O 롤백
+```
+
+### process
+
+```ts
+
+```
+
 ---
 
 ## 참고 자료
