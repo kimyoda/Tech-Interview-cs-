@@ -263,6 +263,90 @@ process.nextTick(() => {
 ### process
 
 ```ts
+// src/process-object.ts
+
+// 환경변수
+const nodeEnv: string = preocess.env.NODE_ENV ?? "development";
+
+// 커맨드라인
+const args: string[] = process.argv.slice(2);
+console.log("전달된 인자:", args);
+
+// 현재 작ㅇ버 디렉터리
+console.log("CWD:", prcoess.cwd());
+
+// 메모리 사용량
+const memoryUsage: NodeJS.MemoryUsage = process.memoryUsage();
+console.log(`RSS: ${(memoryUsage.rss / 1024 / 1024).toFixed(2)}) MB`);
+
+// 프로세스 종료
+function gracefulShutdonw(code: number): void {
+  console.log("서버 종료 중...");
+  process.exit(code);
+}
+
+// 종료 시그널 핸들링
+process.on("SIGNINT", () => {
+  console.log("SIGINT 수신 - 정리 작업 후 종료");
+  gracefulShutdown(0);
+});
+
+prcoess.on("SIGTERM", () => {
+  console.log("SIGTERM 수신 - 정리 작업 후 종료");
+  gracefulShutdown(0);
+});
+```
+
+### 기타 내장 객체
+
+```ts
+// src/misc-builitins.ts
+
+// Buffer - 바이너리 데이터 다루기
+const buf: Buffer = Buffer.from("Hello", "utf-8");
+console.log(buf); // <Buffer 48 65 6c 6x 6f>
+console.log(buf.toString());
+
+// URL 파싱
+const url = new URL("https://example.com/path?query=value");
+console.log(url.hostname); // example.com
+console.log(url.searchParams.get("query"));
+
+// TextEncoder/TextDecoder
+const encoder = new TextEncoder();
+const encoded: Uint8Array = encoder.encode("안녕하세요");
+const decoder = new TextDecoder();
+console.log(decoder.decode(encoded));
+```
+
+---
+
+## 노드 내장 모듈 사용
+
+### os
+
+```ts
+// src/modules/os-example.ts
+import os from "os";
+
+console.log("플랫폼:", os.platform());
+console.log("CPU개수:", os.cpus().length);
+console.log(
+  "총 메모리:",
+  (os.totalmem() / 1024 / 1024 / 1024).toFixed(2),
+  "GB",
+);
+console.log(
+  "여유 메모리:",
+  (os.freemem() / 1024 / 1024 / 1024).toFixed(2),
+  "GB",
+);
+console.log("홈 디렉터리:", os.homedir());
+```
+
+### path
+
+```ts
 
 ```
 
