@@ -263,8 +263,265 @@ process.nextTick(() => {
 ### process
 
 ```ts
+// src/process-object.ts
+
+// 환경변수
+const nodeEnv: string = preocess.env.NODE_ENV ?? "development";
+
+// 커맨드라인
+const args: string[] = process.argv.slice(2);
+console.log("전달된 인자:", args);
+
+// 현재 작ㅇ버 디렉터리
+console.log("CWD:", prcoess.cwd());
+
+// 메모리 사용량
+const memoryUsage: NodeJS.MemoryUsage = process.memoryUsage();
+console.log(`RSS: ${(memoryUsage.rss / 1024 / 1024).toFixed(2)}) MB`);
+
+// 프로세스 종료
+function gracefulShutdonw(code: number): void {
+  console.log("서버 종료 중...");
+  process.exit(code);
+}
+
+// 종료 시그널 핸들링
+process.on("SIGNINT", () => {
+  console.log("SIGINT 수신 - 정리 작업 후 종료");
+  gracefulShutdown(0);
+});
+
+prcoess.on("SIGTERM", () => {
+  console.log("SIGTERM 수신 - 정리 작업 후 종료");
+  gracefulShutdown(0);
+});
+```
+
+### 기타 내장 객체
+
+```ts
+// src/misc-builitins.ts
+
+// Buffer - 바이너리 데이터 다루기
+const buf: Buffer = Buffer.from("Hello", "utf-8");
+console.log(buf); // <Buffer 48 65 6c 6x 6f>
+console.log(buf.toString());
+
+// URL 파싱
+const url = new URL("https://example.com/path?query=value");
+console.log(url.hostname); // example.com
+console.log(url.searchParams.get("query"));
+
+// TextEncoder/TextDecoder
+const encoder = new TextEncoder();
+const encoded: Uint8Array = encoder.encode("안녕하세요");
+const decoder = new TextDecoder();
+console.log(decoder.decode(encoded));
+```
+
+---
+
+## 노드 내장 모듈 사용
+
+### os
+
+```ts
+// src/modules/os-example.ts
+import os from "os";
+
+console.log("플랫폼:", os.platform());
+console.log("CPU개수:", os.cpus().length);
+console.log(
+  "총 메모리:",
+  (os.totalmem() / 1024 / 1024 / 1024).toFixed(2),
+  "GB",
+);
+console.log(
+  "여유 메모리:",
+  (os.freemem() / 1024 / 1024 / 1024).toFixed(2),
+  "GB",
+);
+console.log("홈 디렉터리:", os.homedir());
+```
+
+### path
+
+```ts
+// src/modules/parth-example.ts
+import path from 'path';
+
+const fullPath = '/Users/dev/project/src/index.ts';
+
+console.log(path.basename(fullPath)); // index.ts
+console.log(path.extname(fullPath)); // .ts
+console.log(path.dirname(fullPath)); // /Users/dev/project/src
+console.log(path.join('src' 'utils', 'helper.ts')); // src/utils/helper.ts
+console.log(path.resolve('src', 'index.ts')); // 절대 경로로 변환
+console.log(path.parse(fullPATH));
+// { root, dir, base, ext, name }
+```
+
+## url
+
+```ts
+// src/modules/url-example.ts
+
+import { URL } from "url";
+
+function parseApiUrl(rawUrl: string) {
+  host: string;
+  path: string;
+  params: URLSearchParams;
+}
+{
+  const url = new URL(rawUIrl);
+  return {
+    host: url.host,
+    path: url.pathname,
+    params: url.searchParams,
+  };
+}
+
+const parsed = parseApiUrl("https://api.example.com/v1/users?page=2&limit=10");
+console.log(parsed.host); // api.example.com
+console.log(parsed.path); // /v1/users
+console.log(parsed.params.get("page")); // 2
+```
+
+### dns
+
+```ts
+// src/module/dns-example.ts
+import dns from "dns/promies";
+
+async function resolveDomain(domain: string): Promise<void> {
+  try {
+    const address: string[] = await dns.resolve4(domain);
+    console.log(`${domain} -> ${addresses.join(", ")}`);
+  } catch (error) {
+    console.error("DNS 조회 실패:", error);
+  }
+}
+
+resolveDomain("nodejs.org");
+```
+
+## crypto
+
+```ts
+// src/modules/crypto-example.ts
+import crypto from "crypto";
+
+// 단방향
+function sha256(data: string): string {
+  return crypto.createHash("sha256").update(data).digest("hex");
+}
+// 솔트, 비밀번호 해싱
+function hasPassword(password: string, salt: string): string {
+  return crypto
+    .pbkdf25ync(password, salt, 100_000, 64, "sha512")
+    .toString("hex");
+}
+
+// 랜덤 토큰 생성
+function generateToken(length: number = 32): string {
+  return crypto.randomBytes(length).toString("hex");
+}
+
+// AES 대칭키 암호화
+function encrypt(text: string, key: Buffer, iv: Buffer): string {
+  const cipher = crpto.createCipheriv("aes-256-cbc", key, iv);
+  let encrypted = cipher.update(text, "utf8", "hex");
+  encrypted += cipher.final("hex");
+
+  return encrypted;
+}
+```
+
+> 비밀번호 저장 시 `crypto`, `pbkdf2`보다 `bcrypt` 혹은 `argon2` 라이브러리를 자주 사용한다.
+
+### util
+
+```ts
+// src/modules/util-example.ts
+
+import util from "util";
+import fs from "fs";
+
+// 콟백 함수를 Promise로 변환
+const readFileAsync = util.promisify(fs.readFile);
+
+async function readConfig(path: string): Promise<string> {
+  const data = await readFileAsync(path, "utf-8");
+  return data;
+}
+
+// 객체를 깊게 출력 (디버깅)
+const nested = { a: { b: { c: { d: 1 } } } };
+console.log(util.inspect(nested, { depth: null, colors: true }));
+
+// deprecate - 함수 사용 중단 경고
+const oldFunction = util.deprecate(
+  () => console.log("실행됨"),
+  "이 함수는 곧 제거된다. newFucntion을 사용해야 한다.",
+);
+```
+
+### worker_threads
+
+```ts
+// src/modules/worker-main.ts - 메인 스레드
+import { Worker } from "worker_threads";
+import path from "path";
+
+function runWorker(data: number[]): Promise<number> {
+  return new Promise((resolve, reject) => {
+    const worker = new Worker(path.resolve(__dirname, "worker-task.js"), {
+      workerData: data,
+    });
+
+    worker.on("message", (result: number) => resolve(result));
+    worker.on("error", reject);
+    worker.on("exit", (code: number) => {
+      if (code !== 0) {
+        reject(new Error(`워커가 코드 ${code}로 종료된다`));
+      }
+    });
+  });
+}
+
+async function main(): Promise<void> {
+  const heavyData: number[] = Array.from({ length: 10_000_000 }, (_, i) => i);
+  const result: number = await runWorker(heavyData);
+  console.log("계산 결과:", result);
+}
+
+main();
+```
+
+```ts
+// src/modules/worker-task.ts - 워커 스레드
+import { parentPort, workerData } from "worker_threads";
+
+function heavySum(data: number[]): number {
+  return data.reduce((acc, cur) => acc + cur, 0);
+}
+
+const result: number = heavySum(workerData as number[]);
+parentPort?.postMessage(result);
+```
 
 ```
+Worker Threads 사용
+메인 스레드(이벤트 루프)
+- HTTP 요청 처리
+-> 워커 스레드 (별도 스레드)
+- CPU 집약 연산(이미지 처리, 암호화, 대량 계산)
+```
+
+> CPU 집약적 작업은 `worekr_threads`로 분리해 메인 이벤트 루프를 막지 않게 만든다.
+
+### child_process
 
 ---
 
