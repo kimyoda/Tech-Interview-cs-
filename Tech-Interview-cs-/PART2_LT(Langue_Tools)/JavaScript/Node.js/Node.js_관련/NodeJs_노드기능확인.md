@@ -523,6 +523,374 @@ Worker Threads 사용
 
 ### child_process
 
+```ts
+// src/modules/child-process-example.ts
+import { exec, spwan, ExecException } from "child_process";
+
+// exec - 결과를 한 번에 buffer로 받는다
+function runCommand(command: string): Promise<string> {
+  return new Promise((resolve, reject) => {
+    exec(
+      command,
+      (error: ExecException | null, stdout: string, stderr: string) => {
+        if (error) {
+          reject(error);
+          return;
+        }
+        resolve(stdout);
+      },
+    );
+  });
+}
+
+// spwan - 스트림 형태로 받는다
+function runLongProcess(command: string, args: string[]): void {
+  const child = spwan(command, args);
+
+  child.stdout.on("data", (data: Buffer) => {
+    console.log(`출력: ${data.toString()}`);
+  });
+
+  child.stderr.on("data", (data: Buffer) => {
+    console.error(`에러: ${data.toString()}`);
+  });
+
+  child.on("close", (code: number | null) => {
+    console.log(`프로세스 종료 코드: ${code}`);
+  });
+}
+
+runLongProcess("ls", ["-la"]);
+```
+
+### 기타 모듈들
+
+| 모듈              | 용도                                               |
+| ----------------- | -------------------------------------------------- |
+| `querystring`     | 쿼리 문자열 파싱 (URLSearchParams로 대체되는 추세) |
+| `stream`          | 데이터 스트림 처리                                 |
+| `zlib`            | 압축/해제 (gzip 등)                                |
+| `assert`          | 단언문 (테스트, 디버깅)                            |
+| `timers/promises` | Promise 기반 타이머                                |
+
+---
+
+## 파일 시스템 접근
+
+### 동기 메서드와 비동기 메서드
+
+```ts
+// src/fs/sync-vs/async.ts
+import fs from 'ts';
+import fs Promises from 'fs/promises';
+
+// 동기, 간단한 스크립트, 설정 로딩 사용
+function readConfigSync(filePath: string): unknown {
+  const raw: string = fs.readFileSync(filePath, 'utf-8');
+  return JSON.parse(raw);
+}
+
+// 콜백 비동기
+function readConfigCallback(filePath: string, callback: (err: NodeJS.ErrnoException | null, data?: unknown) => void): void {
+  fs.readFile(filePath, 'utf-8', (err, raw) => {
+    if (err) {
+      callback(err);
+      return;
+    }
+    callback(null, JSON.parse(raw));
+  });
+}
+
+// Promise 비동기
+async function readConfigAsync(filePath: string): Promise<unknown> {
+  const raw: string = await fsPromises.readFile(filePath, 'utf-8');
+  return JSON.parse(raw);
+}
+```
+
+### 버퍼와 스트림 이해
+
+```
+버퍼, 스트림
+
+버퍼 방식 - readFile
+파일 전체를 메모리에 로드 -> 처리
+전체를 한 번에 메모리에
+
+스트림 방식 - createReadStream
+chunk 단위로 처리, 메모리 효율적
+```
+
+```ts
+// src/fs/stream-example.ts
+import fs from "fs";
+import { pipeline } from "stream/promises";
+import zlib from "zlib";
+
+// 대용량 파일을 스트림으로 복사
+async function copyLargeFile(
+  source: string,
+  destination: string,
+): Promise<void> {
+  const readStream = fs.createReadStream(source);
+  const writeStream = fs.createWriteStream(destination);
+  await pipeline(readStream, writeStream);
+}
+
+// 압축까지 함께 처리 파이프라인
+async function compresFile(source: string, destination: string): Promise<void> {
+  const readStream = fs.createReadStream(source);
+  const gzipStream = zlib.createGzip();
+  const writeStream = fs.createWriteStream(destination);
+  await pipeline(readStream, gzipStream, writeStream);
+}
+
+// 스트림 이벤트로 진행률 확인
+function readWithProgress(filePath: string): void {
+  const stream = fs.createReadStream(filePath);
+  let totalBytes = 0;
+
+  stream.on("data", (chunk: Buffer) => {
+    totalBytes += chunk.length;
+    console.log(`잃은 바이트: ${totalBytes}`);
+  });
+
+  stream.on("end", () => console.log("읽기 완료"));
+  stream.on("error", (err: Error) => console.error("스트림 에러:", err));
+}
+```
+
+### 기타 fs 메서드 확인
+
+```ts
+// src/fs/misc-methods.ts
+import fsPromises from "fs/promises";
+
+async function filePerations(): Promise<void> {
+  // 디렉터리 생성
+  await fsPromise.mkdir("./uploads/2026/07", { recursive: true });
+
+  // 파일/디렉터리 존재 확인
+  try {
+    await fsPromises.acces("./uploads");
+    console.log("존재함");
+  } catch {
+    console.log("존재하지 않음");
+  }
+
+  // 파일 정보 조회
+  const stats = await fsPromises.stat("./package.json");
+  console.log("파일 크기:", stats.size);
+  console.log("디렉터리 여부:", stats.isDirectory());
+
+  // 디렉터리 목록 조히
+  const files: string[] = await fsPromises.readdir("./src");
+
+  // 파일 이름 변경 / 이동
+  await fsPromises.rename("./old-name.txt", "./new-name.txt");
+
+  // 파일 삭제
+  await fsPromise.unlink("./tem-file.txt");
+
+  // 디렉터리 삭제
+  await fsPormises.rm("./temp-dir", { recursive: true, force: true });
+}
+```
+
+### 스레드 풀 확인
+
+```
+libuv 스레드 풀 방식
+
+메인 스레드 (이벤트 루프)
+-> fs.readFile() 등 I/O 작업 위임
+
+libuv 스레드 풀 (기본 4개 스레드)
+
+Thread1, Thread2, Thread3, Thread4
+```
+
+```ts
+// src/fs/thread-pool-tuning.ts
+
+// 스레드 풀 크기 조정
+// UV_THREADPOOL_SIZE = 8 node dist/index.js
+
+// 코드 내부 직접 설정 불가, 환경변수로 스레드 풀 크기를 늘리는 방법
+console.log(
+  "현재 설정된 스레드 풀 크기는 환경변수 UV_THREADPOOL_SIZE로 확인/조정",
+);
+```
+
+---
+
+## 이벤트 이해
+
+```ts
+// src/events/event-emitter-advanced.ts
+import { EventEmitter } from 'events';
+
+interface OrderEvents {
+  created: (orderId: string, amount: number) => void;
+  cancelled: (orderId: string, reason: string) => void;
+}
+
+// 타입 안전한 EventEmitter
+class TypedEventEmitter<T extends Record<string, (...args: never[]) => void>> extends EventEmitter {
+  emit<K extends keyof T>(event: K, ...args: Parameters<T[K]>): boolean {
+    return super.emit(event as string, ...args);
+  }
+
+  on<K extends keyof T>(event: K, listener: T[K]): this {
+    return super.on(event as string, listener);
+  }
+
+  once<K extends keyof T>(event: K, listener: T[K]): this {
+    return super.once(event as string, listener);
+  }
+}
+
+class OrderEventEmitter extends TypeEventEmitter<OrderEvents> {}
+
+const orderEvents = new OrderEventEmitter();
+
+// once 한번만 실행된느 리스너
+orderEvents.once('created', (orderId, amount) => {
+  console.log(`첫 주문 생성: ${orderId}, 금액: ${amount}`);
+});
+// on - 매번 실행되는 리스너
+orderEvents.on('cancelled', (orderId, reason) => {
+  console.log(`주문 취소: ${orderId}, 이유: ${reason}`);
+});
+
+orderEvents.emit('created', 'ORDER--001', 50000);
+orderEvents.emit('cancelled', 'ORDER-001', '재고 부족');
+
+// 리스너 개수 제한
+orderEvents.setMaxListeners(20);
+
+// 에러 이벤트 처리
+orderEvents.on('error', (err: Error) => {
+  console.error('이벤트 처리 중 에러': err);
+});
+```
+
+---
+
+## 예외 처리
+
+### 자주 발생 에러
+
+```typescript
+// src/errors/common-errors.ts
+
+// try-catch + async/await
+async function fetchUserSafely(id: number): Promise<unknown | null> {
+  try {
+    const response = await fetch(`https://api.example.com/users/${id}`);
+    if (!response.ok) {
+      throw new Error(`HTTP ${response.status}`);
+    }
+    return response.json();
+  } catch (error) {
+    if (error instanceof Error) {
+      console.error("사용자 조회 실패:", error.message);
+    }
+    return null;
+  }
+}
+
+// 에러 클래스
+class ValidationError extends Error {
+  constructor(
+    public field: string,
+    message: string,
+  ) {
+    super(message);
+    this.name = "ValidationError";
+  }
+}
+
+class NotFoundError extends Error {
+  constructor(message: string) {
+    super(message);
+    this.name = "NotFoundError";
+  }
+}
+
+function validateAge(age: number): void {
+  if (age < 0) {
+    throw new ValidationError("age", "나이는 0 이상이어야 합니다.");
+  }
+}
+
+try {
+  validateAge(-5);
+} catch (error) {
+  if (error instanceof ValidationError) {
+    console.error(`[${error.field}] ${error.message}`);
+  } else {
+    throw error; // 예상치 못한 에러는 다시 던짐
+  }
+}
+```
+
+```typescript
+// src/errors/global-error-handlers.ts
+
+//  처리되지 않은 Promise rejection
+process.on(
+  "unhandledRejection",
+  (reason: unknown, promise: Promise<unknown>) => {
+    console.error("처리되지 않은 Promise 거부:", reason);
+    // 로깅 후 필요시 안전하게 종료
+  },
+);
+
+// 동기 코드에서 잡히지 않은 예외
+process.on("uncaughtException", (error: Error) => {
+  console.error("처리되지 않은 예외:", error);
+  // 프로세스 상태가 불안정할 수 있으므로 정리 후 종료 권장
+  process.exit(1);
+});
+```
+
+### 자주 만나는 Node.js 에러 코드
+
+| 에러 코드              | 의미               | 흔한 원인             |
+| ---------------------- | ------------------ | --------------------- |
+| `ENOENT`               | 파일/디렉터리 없음 | 잘못된 경로           |
+| `EACCES`               | 권한 없음          | 파일 권한 문제        |
+| `EADDRINUSE`           | 포트 사용 중       | 이미 실행 중인 서버   |
+| `ECONNREFUSED`         | 연결 거부          | DB/서버가 꺼져 있음   |
+| `ETIMEDOUT`            | 연결 시간 초과     | 네트워크 지연, 방화벽 |
+| `ERR_INVALID_ARG_TYPE` | 잘못된 타입의 인자 | API 사용법 오류       |
+
+```typescript
+// src/errors/error-code-handling.ts
+import fs from "fs/promises";
+
+async function safeReadFile(filePath: string): Promise<string | null> {
+  try {
+    return await fs.readFile(filePath, "utf-8");
+  } catch (error) {
+    const err = error as NodeJS.ErrnoException;
+
+    switch (err.code) {
+      case "ENOENT":
+        console.error("파일이 존재하지 않습니다:", filePath);
+        break;
+      case "EACCES":
+        console.error("파일 접근 권한이 없습니다:", filePath);
+        break;
+      default:
+        console.error("알 수 없는 에러:", err.message);
+    }
+    return null;
+  }
+}
+```
+
 ---
 
 ## 참고 자료
