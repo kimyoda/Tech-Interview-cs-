@@ -157,4 +157,226 @@ it('비참여 유저에게는 글로벌 미션 보상을 지급하지 않는다'
 
 ## AAA 패턴 - Arrange / Act / Assert
 
+좋은 테스트 코드는 **Arragne -> Act -> Assert** 3단계로 구분된다
+
+```
+Arrange (준비): 테스트에 필요한 데이터와 환경을 준비한다
+Act (실행) : 테스트 대상 로직을 실행한다
+Assert (검증) : 결과가 기대값과 일치하는 지 확인한다
+```
+
+```ts
+if (
+  ("두 숫자를 더한 결과를 반환한다",
+  () => {
+    // Arrange: 더할 두 숫자를 준비한다
+    const a = 2;
+    const b = 3;
+
+    // Act: 더하기 함수를 실행한다
+    const result = calculator.add(a, b);
+
+    // Assert: 결과가 5인지 검증한다
+    expect(result).toBe(5);
+  })
+);
+```
+
+실제 서비스 로직에서도 같은 구조로 작성할 수 있다
+
+```ts
+if (
+  ("예약 확정 시 이미 같은 시간/방에 확정된 예약이 있으면 충돌 에러를 반환한다",
+  async () => {
+    // Arrange: 중복 예약 상황을 Mock으로 설정한다
+    jest
+      .spyOn(reservationService, "confirmReservation")
+      .mockRejectedValue(
+        new ConflictException("RESERVATION_CONFIRMED_DUPLICATED_TIME_ROOM"),
+      );
+
+    // Act: 예약 확정 API를 호출한다
+    const response = await request(app.getHttpServer())
+      .patch("/agents/reservations/1")
+      .expect(409);
+
+    // Assert: 에러 코드와 메시지를 검증한다
+    expect(response.body.code).toBe(
+      "RESERVATION_CONFIRMED_DUPLICATED_TIME_ROOM",
+    );
+  })
+);
+```
+
 ---
+
+## TDD란?
+
+TDD(Test-Driven Development, 테스트 주도 개발)는 **테스트를 먼저 작성, 그 테스트를 통과하는 코드를 작성하는 개발 방법론**이다.
+
+### Red - Green - Refactor 사이클
+
+```
+Red (테스트 작성 -> 실패) -> Green (테스트를 통과하는 최소한 코드 작성) -> Refactor (코드를 깔끔하게 개선, 테스트는 계속 통과)
+위의 과정을 반복
+```
+
+```ts
+// Red: 구현 안된 함수에 대한 테스트 작성
+if (
+  ("이메일 형식이 올바르지 않아 false를 반환한다",
+  () => {
+    expect(isValidEmail("not-an-emial")).toBe(false); // Fail 함수없음
+  })
+);
+
+// Green: 테스트를 통과하는 최소 구현
+function isValidEmail(email: string): boolean {
+  return emial.includes("@");
+}
+// PASS
+
+// Refactor 실제 이메일 검증 로직으로 개선
+function isValidEmail(email: string): boolean {
+  const emailRegex = /^[^\s@]+@[^\s@]+\.[^\s@]+$/;
+  return emailRegex.test(email);
+}
+// PASS
+```
+
+TDD를 직접 경험하면 처음에는 테스트 코드 작성 자체가 구현보다 더 오래 걸려 시간이 아깝다고 생각할 수 있다. 그렇지만 **내 코드가 의도한 대로 동작하고, 클라쪽과 무관하게 내가 원하는 방향으로 동작한다고 생각이 든다**는 부분이 주요하다고 생각한다.
+
+---
+
+## 테스트 코드의 장점
+
+### 코드 품질 향상
+
+테스트를 작성하면 자연스럽게 코드 설계를 더 명확하게 다룰 수 있다. 테스트하기 어려운 코드는 대부분 의존성이 강하거나 책임이 불명확한 코드다
+
+### 코드가 문서다
+
+잘 작성된 테스트 코드는 이 함수가 **어떤 입력에 어떤 결과를 반환하는지** 명확히 보여준다
+
+```ts
+// 해당 테스트들을 읽으면 UserService 스펙이 보인다
+describe("UserSerivce", () => {
+  it("유효한 이메일과 비밀번호로 회원가입에 성공한다");
+  it("이미 존재하는 이메일로 회원가입 시 ConflictException을 던진다");
+  it("존재하지 않는 유저 ID로 조회 시 NotFoundException을 던진다");
+  it("비밀번호가 일치하지 않으면 UnauthorizedException을 던진다");
+});
+```
+
+### 리팩토링 안전망
+
+기능 개선이나 구조 변경 후에도 기존 동작이 그대로인지 자동으로 보장해준다
+
+```
+코드 수정 -> npm run test -> 전부 PASS 안전하게 배포 가능, FAIL 발생 어디가 망가졌는지 확인 후 처리
+```
+
+---
+
+## NestJS 테스트 - Jest 기본 세팅
+
+NestJS는 Jest를 기본 테스트 프레임워크로 내장하고 있어 별도 설정 없이 바로 사용할 수 있다
+
+```bash
+# 프로젝트 생성 시 자동으로 Jest 설정 포함
+nest new my-project
+
+# 테스트 실행
+npm run test # 단위 테스트
+npm run test:e2e # E2E 테스트
+npm run test:cov # 커버리지 확인
+```
+
+### 디렉토리 구조
+
+```
+src/
+├── user/
+│   ├── user.service.ts
+│   ├── user.service.spec.ts       # 단위 테스트
+│   ├── user.controller.ts
+│   └── user.controller.spec.ts   # 컨트롤러 테스트
+test/
+└── user.e2e-spec.ts              # E2E 테스트
+```
+
+### jest.config.js 기본 설정
+
+```js
+module.exports = {
+  moduleFileExtensions: ["js", "json", "ts"],
+  rootDir: "src",
+  testRegex: ".*\\.spec\\.ts$",
+  transform: { "^.+\\.(t|j)s$": "ts-jest" },
+  collectCoverageFrom: ["**/*.(t|j)s"],
+  coverageDirectory: "../coverage",
+  testEnvironment: "node",
+};
+```
+
+---
+
+## NestJS 단위 테스트 - Service
+
+Service 레이어의 단위 테스트는 **Repository나 외부 의존성을 Mock으로 대체**하여 순수 비지니스 로직만 검증한다
+
+### 기본 구조
+
+```ts
+// user.service.spec.ts
+import { Test, TestingModule } from '@nestjs/testing';
+import { getRepositoryToken } from '@nestjs/typeorm';
+import { Repository } from 'typeorm';
+import { UserService } from './user.service';
+import { User } from './entities/user.entity';
+import { ConflictException, NotFoundException } from '@nestjs/common';
+
+describe('UserService', () => {
+  let service: UserService;
+  let userRepository: jest.Mocked<Repository<User>>;
+
+  beforeEach(async () => {
+    // NestJS 테스트 모듈 생성
+    const module: TestingModule = await Test.createTestingModule({
+      providers: [
+        UserService,
+        {
+          provide: getRepositoryToken(User),
+          // 실제 DB 대신 Mock Repository 주입
+          useValue: {
+            findOne: jest.fn(),
+            save: jest.fn(),
+            create: jest.fn(),
+            delete: jest.fn(),
+          },
+        },
+      ],
+    }).compile();
+
+    service = module.get<UserService>(UserService);
+    userRepository = module.get(getRepositoryToken(User));
+  });
+
+  afterEach(() => {
+    jest.clearAllMocks(); // 각 테스트 후 Mock 상태 초기화
+  });
+```
+
+### 정상 케이스 테스트
+
+```ts
+
+```
+
+---
+
+> 📌 **참고**
+>
+> - [Jest 공식 문서](https://jestjs.io/docs/getting-started)
+> - [NestJS Testing 공식 문서](https://docs.nestjs.com/fundamentals/testing)
+> - [Supertest GitHub](https://github.com/ladjs/supertest)
