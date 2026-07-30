@@ -370,7 +370,181 @@ describe('UserService', () => {
 ### 정상 케이스 테스트
 
 ```ts
+describe("회원가입", () => {
+  it("유효한 정보로 회원가입에 성공한다", async () => {
+    // Arrange
+    const createUserDto = {
+      email: "test@example.com",
+      password: "password123",
+    };
+    const savedUser = { id: 1, email: "test@example.com" } as User;
 
+    userRepository.findOne.mockResolvedValue(null); // 중복 유저 없음
+    userRepository.create.mockReturnValue(savedUser);
+    userRepository.save.mockResolvedValue(savedUser);
+
+    // Act
+    const result = await service.create(createUserDto);
+
+    // Assert
+    expect(result).toEqual(savedUser);
+    expect(userRepository.findOne).toHaveBeenCalledWith({
+      where: { email: "test@example.com" },
+    });
+  });
+
+  it("이미 존재하는 이메일로 가입 시 ConflictException을 던진다", async () => {
+    // Arrange
+    const createUserDto = { email: "duplicate@example.com", password: "1234" };
+    userRepository.findOne.mockResolvedValue({ id: 1 } as User); // 이미 존재
+
+    // Act & Assert
+    await expect(service.create(createUserDto)).rejects.toThrow(
+      ConflictException,
+    );
+  });
+});
+
+  describe('유저 조회', () => {
+    it('존재하는 유저 ID로 조회 시 유저를 반환한다', async () => {
+      // Arrange
+      const user = { id: 1, email: 'test@example.com' } as User;
+      userRepository.findOne.mockResolvedValue(user);
+
+      // Act
+      const result = await service.findById(1);
+
+      // Assert
+      expect(result).toEqual(user);
+    });
+
+    it('존재하지 않는 유저 ID로 조회 시 NotFoundException을 던진다', async () => {
+      // Arrange
+      userRepository.findOne.mockResolvedValue(null);
+
+      // Act & Assert
+      await expect(service.findById(999))
+        .rejects
+        .toThrow(NotFoundException);
+    });
+  });
+});
+```
+
+---
+
+## NestJS 통합 테스트 - Controller
+
+Controller 테스트는 **HTTP 욫어부터 응답까지 전체흐름**를 검증한다
+Service는 Mock으로 대체해서 컨트롤러의 라우팅, 유효성 검사, 응답 형식에 집중한다
+
+```ts
+import { Test, TestingModule } from '@nestjs/testing';
+import { INestApplication, ValidationPipe } from '@nestjs/common';
+import * as request from 'supertest';
+import { UserController } from './user.controller';
+import { UserService } from './user.service';
+
+describe('UserController', () => {
+  let app: INestApplication;
+  let userService: jest.Mocked<UserService>;
+
+  beforeEach(async () => {
+    const module: TestingModule = await Test.createTestingModule({
+      controllers: [UserController],
+      providers: [
+        {
+          provide: UserService,
+          useValue: {
+            findById: jest.fn(),
+            create: jest.fn(),
+            delete: jest.fn(),
+          },
+        },
+      ],
+    }).compile();
+
+    app = module.createNestApplication();
+    app.useGlobalPipes(new ValidationPipe()); // 유효성 검사 파이프 적용
+    await app.init();
+
+    userService = module.get(UserService);
+  });
+
+  afterAll(async () => {
+    await app.close();
+  });
+
+  describe('GET /users/:id', () => {
+    it('존재하는 유저를 조회하면 200과 유저 정보를 반환한다', async () => {
+      // Arrange
+      const user = {id: 1, email: 'test@example.com' };
+      userService.findById.mockResolveValue(user as any);
+      // Act, Assert
+      const response = await request(app.getHttpServer()).get('/user/1').expect(200);
+
+      expect(response.body.email).toBe('test@example.com');
+    });
+
+    it ('존재하지 않는 유저 조회 시 404를 반환한다' async () => {
+      //Arrange
+      userService.findById.mockRejectValue(new NotFoundException());
+
+      // Act, Assert
+      await request(app.getHttpServer()).get('/users/999').expect(404);
+    });
+  });
+
+  describe('POST /users', () => {
+    it('유효하지 않은 이메일 형식으로 요청 시 400을 반환한다', async () => {
+      // Arrange: 잘못된 이메일 형식
+      const invalidBody = { email: 'not-an-email', password: '1234' };
+
+      // Act & Assert: ValidationPipe가 잡아서 400 반환
+      await request(app.getHttpServer())
+        .post('/users')
+        .send(invalidBody)
+        .expect(400);
+    });
+
+    it('이미 존재하는 이메일로 요청 시 409를 반환한다', async () => {
+      // Arrange
+      userService.create.mockRejectedValue(new ConflictException());
+
+      // Act & Assert
+      await request(app.getHttpServer())
+        .post('/users')
+        .send({ email: 'duplicate@example.com', password: 'password123' })
+        .expect(409);
+    });
+  });
+})
+```
+
+> `useValue` 로 Mock을 주입하는 방식이 Java Spring의 `@MockBean` 과 같은 역할을 한다. HTTP 서버를 Mock으로 띄울 필ㅇ ㅛ없이, Service 게층의 동작만 직접 제어할 수 있어 여러 케이스를 빠르게 커버할 수 있다.
+
+---
+
+## Node.js(Ecpress) 테스트 - Supertest
+
+NestJS없이 순수 Express를 사용하는 경우에도 **Jest + Supertest** 조합으로 API 테스트를 작성할 수 있다.
+
+### 기본 세팅
+
+```bash
+npm install --save-dev jest supertest @types/supertest ts-jest
+```
+
+```ts
+// app.ts - 테스트를 위해 app을 분리 export
+import express from "express";
+import { userRouter } from "./routes/user";
+
+const app = express();
+app.use(express.json());
+app.use("/users", userRouter);
+
+export { app };
 ```
 
 ---
