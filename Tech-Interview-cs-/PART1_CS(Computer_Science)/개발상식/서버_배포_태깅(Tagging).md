@@ -16,96 +16,10 @@
 태깅을 안한다면
 
 ```
-example-api:latest의 반복
+jlpga-api:latest의 반복
 ```
 
 `latest`라는 이름표만 계속 쓰면, 지금 서버에 올라간게 정확히 어떤 커밋 버전인지 알 수 없다. 물론 prod-0723 이런식으로 날짜 구분은 될 수 있지만, 당시 빌드가 모든 부분이 적용되어 단계적으로 커밋된 부분을 나누는건 힘들 수 있다.
-`latest`는 태그를 생략했을 때 적용되는 기본 문자열이다. 다음 두 명령은 사실상 같은 참조를 사용한다
-
-```bash
-docker pull exapmle-api
-docker pull example-api;latest
-```
-
-레지스트리는 빌드 시각이나 Git 커밋 시각을 비교해 가장 최신이미지를 자동으로 `latest`로 선정하지 않는다. 누군가 `latest`라는 태그로 마지막에 Push한 이미지가 해당 태그가 가리키는 대상이된다. Docker Hub에서 태그는 기본적으로 다른 이미지로 다시 저장할 수 있는 mutable reference, ECR 역시 저장소 설정을 통해 태그 덮어쓰기를 허용하거나 막을 수 있다.
-
-## 태깅이 필요한 이유
-
-매번 서버 코드를 빌드하면 새로운 이미지가 만들어진다. 배포 이미지에 구분 가능한 태그가 없으면 중간에 롤백을 하거나 몇 건 정도만 수정하고싶은 경우 처리가 힘들기에 대비한다
-
-- 현재 QA와 Prod 어떤 이미지가 배포되어 있는가
-- 해당 이미지는 Git 커밋에서 만들어졌는가
-- 어떤 Jenkins 빌드가 해당 이미지를 생성했는가
-- 이슈가 발생했을 때 어느 이미지로 롤백해야 하나
-- QA에서 검증한 이미지와 Live 이미지가 실제로 동일한가
-
-따라서 배포 이미지에 빌드와 소스를 추적할 수 있는 고유 태그를 붙이는 것이 좋다.
-
----
-
-### 태그를 지정하지 않는 이슈
-
-태그를 지정하지 않고 이미지를 빌드하거나
-
-```
-example-api:latest
-```
-
-누군가 다음과 같이 Push하면 `latest`가 가리키는 이미지가 변경될 수 있다
-동일한 태그를 반복해서 사용하면 문제가 생길 수 있다
-
-```text
-어제의 example-api:latest
--> digest: sha256:1111...
-
-오늘의 example-api:latest
--> digest: sha256:2222....
-```
-
-두 이미지의 이름은 가트안 실제 내용은 다를 수 있다. 이 경우 K8s 설정에 기록되어 있어도, 해당 설정만 보고 어떤 코드가 실행되고 있는지 정확히 판단하기 어렵다
-레지스트리에서 `latest`가 다른 이미지로 변경되어도 Kubernetes Deployment의 Pod가 변경되지 않았다면 새 롤아웃이 자동으로 시작되지 않는다
-운영 환경에서 고유 태그를 사용하는것이 좋다
-
-```text
-jlpga-api:20260730-121-a1b2c3d4
-
-```
-
----
-
-### 날짜 태그만으로 충분한가
-
-다음처럼 날짜 기반 태그를 사용할 수 있다
-
-```text
-example-api:prod-20269731
-```
-
-날짜가 있으면 언제 만들어진 이미지 대략 확인할 수 있다
-같은 날 여러번 빌드하거나 배포하면 각각을 구분하기 어렵다
-이를 보완하기 위해 Jenkins 빌드 번호를 추가할 수 있다
-
-```text
-prod-20260731-121
-```
-
-날짜와 빌드 번호만으로는 Git 컷민을 즉시 확인하기 어려울 수 있다. Git 커밋 SHA까지 포함하는 방식을 권장한다
-
-```text
-20260731-121-a1b2c3
-
-20260730
-│
-└─ 이미지 빌드 날짜
-
-121
-│
-└─ Jenkins 빌드 번호
-
-a1b2c3d4
-│
-└─ Git 커밋 SHA 일부
-```
 
 ---
 
@@ -114,14 +28,10 @@ a1b2c3d4
 ### 기본 흐름
 
 개발이 끝난 서버 코드를 빌드하면 아래처럼 이미지가 하나 만들어진다
-Docker 태깅은 이미지를 복제, 새로운 이미지를 만드는 행위보다, 기존 이미지에 새로운 참조를 추가하는 행위에 가깝다.
 
 ```
-docker tag jlpga-api:build-121 \
-  123456789012.dkr.ecr.ap-northeast-2.amazonaws.com/jlpga-api:build-121
+jlpga-api:latest
 ```
-
-해당 명령은 이미지 내용을 다시 빌드하지 않는다. 동일한 로컬 이미지에 ECR에 Push 할 수 있는 새 이름을 붙인다. Docker 공식 명령도 `docker image tag`를 "SOURCE_IMAGE 가르키는 TARGET_IMAGE 태그를 생성하는 것"으로 정의한다.
 
 해당 이미지를 QA 환경에 배포하려면, 아래처럼 구분 가능한 태그를 새로 붙인다.
 
@@ -132,53 +42,6 @@ jlpga-api:qa-20260730-121
 또는 이미지 이름없이 태그 값만 짧게 쓸 수도 있다.
 
 이후 Jenkins나 Kuberenetes는 `jlpga-api:qa-20260730-121` 이미지를 그대로 가져와서 배포한다.
-
-처음부터 고유 태그를 지정할 수 있다
-
-```bash
-docker build \ -t example-api:20260731-121-a1b2c3 \
-```
-
-ECR 주소까지 포함해 빌드할 수 있다
-
-```bash
-docker build \
-  -t 123456789012.dkr.ecr.ap-northeast-2.amazonaws.com/example-api:20260730-121-a1b2c3d4 \
-  .
-
-```
-
-이후 ECR에 Push 한다
-
-```bash
-docker push \
-  123456789012.dkr.ecr.ap-northeast-2.amazonaws.com/jlpga-api:20260730-121-a1b2c3d4
-
-```
-
-### 기존 이미지에 새 태그 붙이기
-
-이미 생성된 이미지에 새 태그를 추가할 수 있다
-
-```bash
-docker tag \
-  example-api:latest \
-  123456789012.dkr.ecr.ap-northeast-2.amazonaws.com/example-api:20260730-121-a1b2c3d4
-```
-
-새 태그를 ECR에 Push한다
-
-해당 과정에서 이미지가 다시빌드되는것은 아니다. 기존 이미지에 새로운 참조 이름이 추가된다
-
-> 20260731-121-a1b2c3 태그로 배포
-
-Docker 명령이나 Kubernetes 설정에서 일반적으로 저장소 이름을 포함한 이미지 참조가 필요하다
-
-```text
-example-api:20260731-121-a1b2c3
-```
-
----
 
 ### 태그 이름은?
 
@@ -290,6 +153,28 @@ Prod Deployment의 이미지 참조 변경
     ▼
 배포 결과 및 롤아웃 상태 확인
 
+### 태깅 후 배포까지 흐름
+
+```
+  코드 수정
+     │
+     ▼
+  Git Push
+     │
+     ▼
+  Jenkins Build
+     │
+     ▼
+  Docker Image 생성   (jlpga-api:latest)
+     │
+     ▼
+  이미지에 Tag 부착    (jlpga-api:qa-20260730-121)
+     │
+     ▼
+  ECR(이미지 저장소) 등록
+     │
+     ▼
+  Kubernetes가 해당 Tag를 Pull → 배포
 ```
 
 **"새로운 배포 버전을 만들고 QA/Prod에 올리는 과정 전체"**
