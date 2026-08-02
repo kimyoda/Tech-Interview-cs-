@@ -83,6 +83,76 @@ Docker 태깅, Git 태깅의 차이는?
 
 ---
 
+### 이미지 digest
+
+태그는 사람이 읽기 쉽고 변경될 수 있다. digest는 이미지 콘텐츠를 기준으로 만들어진 식별자다
+
+```text
+sha256:0123456789abcdef...
+
+```
+
+동일한 태그가 digest가 다르면 서로 다른 이미지다
+
+```text
+jlpga-api:v1.2.0
+└─ sha256:1111...
+
+태그 덮어쓰기 후
+
+jlpga-api:v1.2.0
+└─ sha256:2222...
+
+```
+
+---
+
+### 태깅 후 배포까지 흐름
+
+```
+코드 수정
+    │
+    ▼
+Git Commit / Git Push
+    │
+    ▼
+Jenkins Pipeline 실행
+    │
+    ├─ 테스트
+    ├─ Git SHA 확인
+    └─ BUILD_NUMBER 확인
+    │
+    ▼
+고유 이미지 태그 생성
+20260730-121-a1b2c3d4
+    │
+    ▼
+Docker 이미지 한 번 빌드
+    │
+    ▼
+ECR Push
+    │
+    ▼
+이미지 digest 기록
+    │
+    ▼
+QA Deployment의 이미지 참조 변경
+    │
+    ▼
+Kubernetes Rolling Update
+    │
+    ▼
+QA 테스트 및 승인
+    │
+    ▼
+동일한 이미지 또는 동일 digest를 Prod로 승격
+    │
+    ▼
+Prod Deployment의 이미지 참조 변경
+    │
+    ▼
+배포 결과 및 롤아웃 상태 확인
+
 ### 태깅 후 배포까지 흐름
 
 ```
@@ -108,6 +178,79 @@ Docker 태깅, Git 태깅의 차이는?
 ```
 
 **"새로운 배포 버전을 만들고 QA/Prod에 올리는 과정 전체"**
+
+---
+
+### 롤백할 때 태그가 중요한 것은
+
+이슈가 생겼다고 가정한다.
+현재 배포 버전은 다음과 같다
+
+```text
+example-api:20260731-121-a1b2c3
+```
+
+이전 정상 버전은 다음과 같다
+
+```text
+example-api:20260730-118-9ㄹㄷㅊ7ㅇ
+```
+
+이전 태그가 덮어써지지 않고 보존되어 있으면 이미지 참조를 되돌릴 수 있다
+
+```bash
+kubectl set image \
+  deployment/example-api \
+  example-api=123456789012.dkr.ecr.ap-northeast-2.amazonaws.com/example-api:20260729-118-9f8e7d6c
+
+```
+
+또는 Kubernetes Deployment 이력을 이용할 수 있다
+
+```bash
+kubectl rollout history deployment/example-api
+kubectl rollout undo deployment/example-api
+
+```
+
+정확한 롤백을 위해 다음 조건이 필요하다
+
+- 배포마다 고유한 태그를 사용한다
+- 기존 고유 태그를 덮어쓰지 않는다
+- 가능하면 digest를 기록
+- Git SHA와 Jenkins 빌드 번호를 연결
+- ECR Tag Immutablitiy 적용을 검토
+
+---
+
+### 정리
+
+태깅해서 올려달라는건
+
+> 이번 수정사항으로 Docker 이미지를 빌드, 소스와 비르드를 추적할 수 있는 고유 태그를 붙여 레지스트리에 Push 한 뒤 또는 QA, PROD에 배포한다
+
+단순히 이미지 이름 뒤에 문자열을 붙이는 것이 전부는 아니다
+
+```text
+Git Commit
+    ↕
+Jenkins Build
+    ↕
+Docker Image
+    ↕
+ECR Digest
+    ↕
+Kubernetes Deployment
+```
+
+안전한 배포를 위해 다음 부분들을 고려하면 좋다
+
+1. 날짜만 사용하지 말고 빌드 번호와 Git SHA 함께 기록한다
+2. 불변 고유 태그 또는 digest를 배포 기준으로 사용
+3. 같은 고유 태그를 다른 이미지에 사용핮 않는다
+4. QA에서 검증한 이미지를 다시 빌드하지 않는다
+5. Kubernetes Deplotment의 이미지 참조를 실제 변경해 롤아웃을 발생시킨다
+6. Git 태그와 Docker 이미지 태그를 구분하고 서로 추적할 수 있게 연결한다
 
 ---
 
