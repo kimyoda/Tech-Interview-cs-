@@ -49,3 +49,19 @@ volumes:
   mysql-data:
   mongo-data:
 ```
+
+```bash
+docker compose up -d
+```
+
+Node.js 프로젝트 세팅:
+
+```bash
+mkdir db-basics-study && cd db-basics-study
+npm init -y
+npm install mysql12 mongdb dotenv
+```
+
+```bash
+
+```

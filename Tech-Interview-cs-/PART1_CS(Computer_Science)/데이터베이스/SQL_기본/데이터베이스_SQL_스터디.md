@@ -114,3 +114,16 @@ export class Member {
 > 유저 테이블, 플레이 기록 테이블, 랭킹 테이블을 나눠 `user_id`라는 연결고리 컬럼으로 관계를 매ㅑㅈ는다. 하나의 테이블에 모든 컬럼을 몰아넣고 싶을 수 있으나, 데이터 중복과 정합성 문제가 생겨 테이블을 나누는것이 중요하다.
 
 #### 키(Key) 컬럼
+
+같은 이름을 가진 사람이 여러 명 있을 수 있듯, 테이블에도 겉보기엔 비슷한 로우가 여러 개 있을 수 있다. 이떄 특정 로우 하나를 정확히 집어낼 수 있게 해주는, 테이블 전체에서 값이 겹치지 않는(unique) 컬럼을 기본 키(Primary Key)라고 부른다.
+이런 특성 때문에 키 컬럼에 보통 일련번호 형태의 숫자를 많이 사용한다.
+
+| RDBMS           | 키 값 자동 생성 방식               | TypeORM 대응                |
+| --------------- | ---------------------------------- | --------------------------- |
+| Oracle          | SEQUENCE 객체를 별도로 만들어 사용 | -                           |
+| MySQL / MariaDB | AUTO_INCREMENT 속성                | `@PrimaryGeneratedColumn()` |
+| PostgreSQL      | SERIAL / SEQUENCE                  | `@PrimaryGeneratedColumn()` |
+
+> Oracle은 시퀀스라는 별도 객체로 키 값을 채번하고, MySQL은 컬럼 속성(AUTO_INCREMENT) 하나로 끝난다. TypeORM을 쓰면 `@PrimaryGeneratedColumn()` 데코레이터 하나로 이 차이를 신경 쓸 필요 없이 추상화해준다.
+
+#### 트랜잭션 처리
