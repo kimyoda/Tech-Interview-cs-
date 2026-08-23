@@ -83,3 +83,34 @@ RDB의 핵심은 하나의 거대한 테이블에 모든 데이터를 우겨넣�
 └─────┴────────┴──────────┘        └─────┴─────────────────┘
      (addr_id가 연결고리 컬럼 = 외래 키)
 ```
+
+이렇게 어떤 테이블을 몇 개로 나누고 어떻게 관계를 맺을 지 설계하는 작업을 데이터베이스 모델링이라고 하고, 정답이 정해져 있다기보다 시스템 성격에 따라 매번 다르게 설계해야 하는 것이다. NestJS + TypeORM에서 관계가 데코레이터로 표현된다.
+
+```ts
+@Entity("address")
+export class Address {
+  @PrimaryGeneratedColumn()
+  id: number;
+
+  @Column()
+  address: string;
+}
+
+@Entity("memeber")
+export class Member {
+  @PrimaryGeneratedColumn()
+  id: number;
+
+  @Column()
+  name: string;
+
+  // 회원정보 테이블의 addr_id 컬럼 = 주소 테이블과의 관계
+  @ManyToOne(() => Address)
+  @JoinColumn({ name: "addr_id" })
+  address: Address;
+}
+```
+
+> 유저 테이블, 플레이 기록 테이블, 랭킹 테이블을 나눠 `user_id`라는 연결고리 컬럼으로 관계를 매ㅑㅈ는다. 하나의 테이블에 모든 컬럼을 몰아넣고 싶을 수 있으나, 데이터 중복과 정합성 문제가 생겨 테이블을 나누는것이 중요하다.
+
+#### 키(Key) 컬럼
