@@ -126,4 +126,223 @@ export class Member {
 
 > Oracle은 시퀀스라는 별도 객체로 키 값을 채번하고, MySQL은 컬럼 속성(AUTO_INCREMENT) 하나로 끝난다. TypeORM을 쓰면 `@PrimaryGeneratedColumn()` 데코레이터 하나로 이 차이를 신경 쓸 필요 없이 추상화해준다.
 
-#### 트랜잭션 처리
+### TRUNCATE TABLE, DELETE
+
+같은 테이블 데이터 지우기처럼 보이지만, TRUNCATE TABEL은 DDL, DELETE는 DML이다
+
+| 구분          | TRUNCATE TABLE     | DELETE                       |
+| ------------- | ------------------ | ---------------------------- |
+| 분류          | DDL                | DML                          |
+| 조건절(WHERE) | 불가 - 전체 삭제만 | 가능 - 원하는 행만 선별 삭제 |
+| 되돌리기      | 불가능(즉시 확정)  | 가능(ROLLBACK으로 복원 가능) |
+| 속도          | 빠름               | TRUNCATE보다 느림            |
+
+```sql
+-- TRUNCATE: 전체를 날리고 되돌릴 수 없다
+TRUNCATE TABLE emp03;
+
+-- DELETE: 조건을 걸 수 있고, 실수해도 ROLLBACK으로 구제 가능
+DELETE FROM emp03 WHERE emp_id = 1001;
+```
+
+> 운영 DB에서 TRUNCATE는 신중하게 사용해야 한다. 보통 조건절이 있는 DELETE + Artisan/스케줄러 잡으로 처리한다.
+
+---
+
+## TCL - COMMIT, ROLLBACK, 트랜잭션
+
+INSERT, UPDATE, DELETE, MERGE로 데이터를 바꿔도 그 자체로 DB에 확정되는 건 아니다. COMMIT을 실행해야 최종 반영, 실수했으면 COMMIT 전까지 ROLLBACK으로 되돌리 수 있다.
+
+```sql
+BEGIN; -- 트랜잭션 시작 (RDBMS마다 표기가 다르다)
+
+UPDATE emp03 SET age = 30 WHERE emp_id = 1001;
+DELETE FROM emp03 WHERE emp_id = 9999;
+
+-- 여기까지 문제가 없으면
+COMMIT;
+
+-- 문제가 생긴다면
+-- ROLLBACK;
+```
+
+NestJS + TypeORM에서 해당 개념이 `transaction()` 블록으로 그대로 대응된다
+
+```ts
+// TCL(COMMIT/ROLLBACK)을 TypeORM 트랜잭션으로 표현
+await this.dataSource.transaction(async (manager) => {
+  await manager.update(Emp, { empId: 1001 }, { age: 30 });
+  await manager.delete(Emp, { empId: 9999 });
+
+  // 콜백이 정상 종료되면 자동으로 COMMIT
+  // 콜백 내부에서 예외가 던져지면 자동으로 ROLLBACK
+});
+```
+
+> 점수 계산 로직처럼 여러 테이블을 동시에 건드리면 중간에 하나라도 실패하면 전부 무효화되어야 하는 케이스다. 랭킹갱신 + 유저 재화 차감을 한 트랜잭션으로 묶지 않으면, 재화는 깍였는데 랭킹은 안 올라가는 정합성이 깨질수도 있다. Redis 분산 락은 동시성 제어를 담당, DB 트랜잭션은 원자성 보장을 담당하는걸 구분
+
+---
+
+## DCL - 평소에 잘 쓰진 않지만 알아야 하는것
+
+DCL은 사용자(user)에게 권한을 주거나(GRANT) 회수하는(REVOKE) 명령어다.
+
+```sql
+-- game_admin 계정에게 emp03 테이블 조회/입력 권한 부여
+GRANT SELECT, INSERT ON emp03 TO game_admin;
+
+-- 권한 회수
+REVOKE INSERT ON emp03 FROM game_admin;
+```
+
+| 명령어 | 역할                               |
+| ------ | ---------------------------------- |
+| GRANT  | 객체(테이블 등)에 대한 권한을 부여 |
+| REVOKE | 부여된 권한을 회수                 |
+
+DCL을 쓰려면 먼저 RDBMS에 사용자 계정이 생성, 그 계정으로 로그인. DBA나 인프라 담당자가 계정/권한을 세팅하는 부분
+
+> QA 환경/운영 환경별로 DB 계정 권한이 다르게 세팅되어 있는 부분에서 확인할 수 있다. DCL로 세팅된 DB 계정 권한을 확인해봐야한다.
+
+---
+
+## 테이블 생성 확인
+
+### 기본 구문
+
+```sql
+CRATE TABLE table_name (
+   column_name1 datatype [NOT] NULL,
+   column_name2 datatype [NOT] NULL,
+   ...
+   PRIMARY KEY ( column_list )
+);
+```
+
+- `table_name`: 테이블 이름
+- `column_name`: 컬럼 이름
+- `datatype`: 컬럼이 담을 데이터의 유ㅜ형
+- `[NOT] NULL`: 값이 없어도 되는 지 여부 (생략하면 기본값은 NULL 허용)
+
+이 SQL 문과 NestJS TypeORM의 Entity는 사실 같은 걸 표현한다
+
+```ts
+// CREATE TABLE과 대응되는 TypeORM Entitiy
+@Entity("emp03")
+export class Emp {
+  @primaryColumn({ name: "emp_id", type: "int" })
+  empId: number;
+
+  @Column({ name: "emp_name", type: "varchar", length: 100, nullable: false })
+  empName: string;
+
+  @Column({ type: "varchar", length: 10, nullable: true })
+  gender: string;
+
+  @Column({ type: "int", nullable: true })
+  age: number;
+}
+```
+
+### 컬럼 데이터형
+
+| 분류           | Oracle                      | MySQL                            | TypeORM 컬럼 타입             | 비고                                                 |
+| -------------- | --------------------------- | -------------------------------- | ----------------------------- | ---------------------------------------------------- |
+| 고정 길이 문자 | `CHAR(n)` 최대 2000byte     | `CHAR(n)`                        | `type: 'char', length: n`     | 짧고 길이가 일정한 코드값에 적합                     |
+| 가변 길이 문자 | `VARCHAR2(n)` 최대 4000byte | `VARCHAR(n)`                     | `type: 'varchar', length: n`  | 오라클만 VARCHAR2, MySQL VARCHAR                     |
+| 숫자           | `NUMBER(p, s)`              | `INT`, `DECIMAL(p, s)`, `BIGINT` | `type: 'int'`, `'decimal'` 등 | Orcal은 정수/소수를 NUMBER 통일, MySQL은 세분화      |
+| 날짜/시간      | `DATE` (년~초 까지 포함)    | `DATE`, `DATETIME`, `TIMESTAMP`  | `type: 'date'`, `'datetime'`  | MySQL은 날짜 전용(DATE)과 날짜+시간(DATETIME)이 분리 |
+
+> Orcale / MySQL VARCHAR 차이 및 NUMBER 사용 차이 유의
+
+### NULL과 NOT NULL
+
+- `NULL`: 값이 없어도 된다는 의미. 아무것도 명시하지 않으면 기본적으로 NULL 허용으로 처리된다.
+- `NOT NULL`: 값이 반드시 있어야 한다는 의미. 값 없이 입력을 시도하면 에러가 나고 입력은 취소된다.
+
+TypeORM에서 `@Column()` 데코레이터의 `nullable` 옵션이 같다.
+
+```ts
+@Column( {nullable: false }) // NOT NULL
+empName: string;
+
+@Column({ nullable: true }) // NULL 허용 (기본값)
+etc: string;
+```
+
+### 기본키 (Primary Key)
+
+기본 키는 테이블에 각 행을 유일하게 식별하는 컬럼, 테이블당 딱 1개만 지정할 수 있다. 컬럼 1개로 만들 수도 있고, 여러 컬럼을 묶어 복합키로 만들 수도 있다.
+
+```sql
+-- 단일 컬럼을 기본 키로 지정하는 두 가지 방법
+
+-- 방법 1: 컬럼 정의 시 바로 지정
+emp_id NUMBER NOT NULL PRIMARY KEY,
+
+-- 방법 2: 모든 컬럼 정의 후 마지막에 지정 (복합키도 해당 방식)
+PRIMARY KEY ( emp_id )
+```
+
+기본 키 컬럼에는 반드시 NOT NULL이 붙어야 하고, 중복된 값을 넣으면 에러가 난다. 또한 기본 키를 생성하면 RDBMS가 자동으로 해당 컬럼에 유일(unique) 인덱스를 만들어준다
+
+```ts
+// TypeORM에서 기본 키
+@PrimaryColumn() // 값을 직접 넣는 기본 키
+empId: number;
+
+@PrimaryGeneratedColumn() // 자동 증가하는 기본 키 (AUTO_INCREMENT 대응)
+id: number;
+```
+
+> 유저별 일일 데이터가 쌓이는 테이블은 `(user_id, play_date)` 같은 복합 키를 자주 쓴다. 기본 키는 1개 컬럼은 기본 키 제약조건은 테이블당 1개, 컬럼 개수가 1개라는 뜻이 아니다.
+
+---
+
+## 적용 - 사원정보 테이블
+
+| 컬럼명    | 설명     | 데이터형(Oracle) | 데이터형(MySQL) | NULL 여부 | 기본 키 |
+| --------- | -------- | ---------------- | --------------- | --------- | ------- | --- |
+| emp_id    | 사원번호 | NUMBER           | INT             | NOT NULL  | Y       |     |
+| emp_name  | 사원명   | VARCHAR2(100)    | VARCHAR(100)    | NOT NULL  |         |
+| gender    | 성별     | VARCHAR2(10)     | VARCHAR(10)     | NULL      |         |
+| age       | 나이     | NUMBER           | INT             | NULL      |         |
+| hire_date | 입사일자 | DATE             | DATE            | NULL      |         |
+| etc       | 기타     | VARCHAR2(300)    | VARCHAR(300)    | NULL      |         |
+
+`emp_id`는 기본 키이기 NOT NULL, `emp_name`은 기본 키는 아니지만 이름 없는 사원은 없기에 NOT NULL로 정의
+위와 같은 판단은 테이블을 설계하는 사람이 담당하여 작업하면 된다.
+
+```sql
+-- MySQL 기준 DDL
+CREATE TABLE emp03 (
+   emp_id INT NOT NULL,
+   emp_name VARCHAR(100) NOT NULL,
+   gender VARCHAR(10) NULL,
+   age INT NULL,
+   hire_date DATE NULL,
+   etc VARCHAR(300) NULL,
+   PRIMARY KEY (emp_id)
+);
+```
+
+```ts
+// 동일한 구조 NestJS TypeORM Entity
+@Entity("emp03")
+export class Emp {
+  @PrimaryColumn({ name: "emp_id", type: "int" })
+  empId: number;
+
+  @Column({ name: "emp_name", type: "varchar", length: 100, nullable: false })
+  empName: string;
+
+  @Column({ type: "varchar", length: 10, nullalbe: true })
+  age: number;
+
+  @Column({ type: "hire_date", type: "date", nullable: true })
+  hireDate: Date;
+
+  @Column({ type: "varchar", length: 300, nullable: true })
+  etc: string;
+}
+```
