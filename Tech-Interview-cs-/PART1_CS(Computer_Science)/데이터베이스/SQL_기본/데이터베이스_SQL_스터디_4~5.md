@@ -204,3 +204,313 @@ this.subwayRepository
   .createQueryBUilder("s")
   .where("s.stationName = :name", { name: "선릉" });
 ```
+
+#### WHERE 절
+
+WHERE 절은 FROM 절에서 가져온 로우 중 **조건식의 결과가 TRUE인 로우만 조회**한다.
+
+SELECT뿐 아니라 UPDATE, DELETE에서도 같은 역할로 사용된다.
+
+```sql
+SELECT *
+FROM subway_statistics
+WHERE station_name = '선릉';
+```
+
+TypeORM QueryBuilder에서는 `where()`를 사용할 수 있다.
+
+```typescript
+this.subwayRepository.createQueryBuilder("s").where("s.stationName = :name", {
+  name: "선릉",
+});
+```
+
+`:name`처럼 파라미터를 사용하면 값을 SQL 문자열에 직접 이어 붙이는 것보다 안전하게 조건을 전달할 수 있다.
+
+---
+
+#### ORDER BY 절
+
+ORDER BY 절은 조회 결과를 정렬한다.
+
+ORDER BY를 생략하면 데이터가 어떤 순서로 반환될지 보장되지 않는다.
+
+오름차순은 `ASC`, 내림차순은 `DESC`를 사용한다.
+
+```sql
+SELECT station_name, passenger_number
+FROM subway_statistics
+ORDER BY passenger_number DESC;
+```
+
+`ASC`는 기본값이므로 생략할 수 있다.
+
+```sql
+SELECT station_name, passenger_number
+FROM subway_statistics
+ORDER BY passenger_number;
+```
+
+TypeORM에서는 `orderBy()`를 사용할 수 있다.
+
+```typescript
+this.subwayRepository
+  .createQueryBuilder("s")
+  .orderBy("s.passengerNumber", "DESC");
+```
+
+> ORDER BY 없이 "최근 데이터가 먼저 나올 것"이라고 가정해서는 안 된다.
+> 랭킹, 최근 목록, 로그처럼 순서가 중요한 데이터라면 반드시 ORDER BY를 명시해야 한다.
+
+---
+
+### 조건에 맞는 데이터 조회하기
+
+WHERE 절에는 다양한 조건 연산자를 사용할 수 있다.
+
+### 조건 연산자
+
+가장 기본적인 비교 연산자는 다음과 같다.
+
+| 연산자     | 의미        | TypeORM 대응                     |
+| ---------- | ----------- | -------------------------------- |
+| `=`        | 같다        | `Equal()` 또는 QueryBuilder 조건 |
+| `>`        | 크다        | `MoreThan()`                     |
+| `<`        | 작다        | `LessThan()`                     |
+| `>=`       | 크거나 같다 | `MoreThanOrEqual()`              |
+| `<=`       | 작거나 같다 | `LessThanOrEqual()`              |
+| `<>`, `!=` | 같지 않다   | `Not(Equal())`                   |
+
+예를 들어 승하차 인원이 1000명 이상인 역만 조회한다.
+
+```sql
+SELECT *
+FROM subway_statistics
+WHERE passenger_number >= 1000;
+```
+
+TypeORM Repository에서는 다음과 같이 표현할 수 있다.
+
+```typescript
+import { MoreThanOrEqual } from "typeorm";
+
+this.subwayRepository.find({
+  where: {
+    passengerNumber: MoreThanOrEqual(1000),
+  },
+});
+```
+
+---
+
+#### LIKE 연산자
+
+LIKE는 값이 정확히 일치하는지를 비교하는 것이 아니라 문자열의 특정 패턴을 검색할 때 사용한다.
+
+`%`는 0개 이상의 임의의 문자열을 의미한다.
+
+| 패턴       | 의미                   |
+| ---------- | ---------------------- |
+| `'선릉%'`  | '선릉'으로 시작하는 값 |
+| `'%선릉'`  | '선릉'으로 끝나는 값   |
+| `'%선릉%'` | '선릉'을 포함하는 값   |
+
+예를 들어 '선릉'으로 시작하는 역을 조회한다.
+
+```sql
+SELECT *
+FROM subway_statistics
+WHERE station_name LIKE '선릉%';
+```
+
+TypeORM에서는 `Like()`를 사용할 수 있다.
+
+```typescript
+import { Like } from "typeorm";
+
+this.subwayRepository.find({
+  where: {
+    stationName: Like("선릉%"),
+  },
+});
+```
+
+> 일반적인 B-Tree 인덱스를 기준으로 `LIKE '선릉%'`처럼 검색어 앞부분이 고정된 조건은 인덱스를 활용할 가능성이 있다.
+> 반면 `LIKE '%선릉'`이나 `LIKE '%선릉%'`처럼 패턴 앞에 `%`가 붙으면 일반적으로 인덱스를 효율적으로 사용하기 어렵다.
+> 실제 인덱스 사용 여부는 인덱스 구성, Collation, 데이터 분포, 옵티마이저 판단 등에 따라 달라질 수 있다.
+
+---
+
+#### IN 연산자
+
+여러 값 중 하나라도 일치하는 데이터를 조회하고 싶을 때 IN을 사용한다.
+
+```sql
+SELECT *
+FROM subway_statistics
+WHERE station_name IN ('선릉', '잠실', '강남');
+```
+
+위 쿼리는 다음과 같은 OR 조건과 같은 의미다.
+
+```sql
+SELECT *
+FROM subway_statistics
+WHERE station_name = '선릉'
+   OR station_name = '잠실'
+   OR station_name = '강남';
+```
+
+TypeORM에서는 `In()`을 사용할 수 있다.
+
+```typescript
+import { In } from "typeorm";
+
+this.subwayRepository.find({
+  where: {
+    stationName: In(["선릉", "잠실", "강남"]),
+  },
+});
+```
+
+---
+
+#### BETWEEN 연산자
+
+BETWEEN은 특정 범위 안의 값을 조회할 때 사용한다.
+
+```sql
+컬럼 BETWEEN 하한값 AND 상한값
+```
+
+BETWEEN은 **양쪽 경계값을 모두 포함한다.**
+
+즉 다음 조건은
+
+```sql
+WHERE passenger_number BETWEEN 500 AND 1000
+```
+
+다음 조건과 같은 의미다.
+
+```sql
+WHERE passenger_number >= 500
+  AND passenger_number <= 1000
+```
+
+실제로 조회해보자.
+
+```sql
+SELECT *
+FROM subway_statistics
+WHERE passenger_number BETWEEN 500 AND 1000;
+```
+
+TypeORM에서는 `Between()`을 사용할 수 있다.
+
+```typescript
+import { Between } from "typeorm";
+
+this.subwayRepository.find({
+  where: {
+    passengerNumber: Between(500, 1000),
+  },
+});
+```
+
+> BETWEEN은 양쪽 값을 포함하기 때문에 `500 초과 1000 미만`처럼 경계를 제외해야 한다면 `>`와 `<`를 직접 사용해야 한다.
+
+날짜를 다룰 때는 데이터형을 특히 주의해야 한다.
+
+`DATE` 컬럼이라면 다음과 같은 조건은 `2026-07-09` 날짜까지 정상적으로 포함한다.
+
+```sql
+WHERE record_date BETWEEN '2026-07-01' AND '2026-07-09'
+```
+
+하지만 `DATETIME`이나 `TIMESTAMP` 컬럼에서 다음과 같이 작성하면
+
+```sql
+WHERE created_at BETWEEN '2026-07-01' AND '2026-07-09'
+```
+
+상한값은 사실상 다음과 같이 해석될 수 있다.
+
+```text
+2026-07-09 00:00:00
+```
+
+따라서 `2026-07-09` 하루 전체를 조회하려는 목적이라면 다음처럼 **다음 날 미만** 조건을 사용하는 방법이 안전하다.
+
+```sql
+WHERE created_at >= '2026-07-01 00:00:00'
+  AND created_at < '2026-07-10 00:00:00';
+```
+
+이런 형태를 반개구간(Half-open interval) 방식이라고 생각하면 이해하기 쉽다.
+
+---
+
+### 데이터 정렬하기
+
+ORDER BY는 하나의 컬럼뿐 아니라 여러 컬럼을 기준으로 정렬할 수도 있다.
+
+앞에 작성한 컬럼의 우선순위가 더 높다.
+
+```sql
+-- 승하차 인원이 많은 순
+-- 같은 인원이면 역명 오름차순
+SELECT station_name, passenger_number
+FROM subway_statistics
+ORDER BY passenger_number DESC, station_name ASC;
+```
+
+TypeORM에서는 `orderBy()` 뒤에 `addOrderBy()`를 추가한다.
+
+```typescript
+this.subwayRepository
+  .createQueryBuilder("s")
+  .orderBy("s.passengerNumber", "DESC")
+  .addOrderBy("s.stationName", "ASC");
+```
+
+실무에서는 랭킹 정렬에서 자주 사용하는 패턴이다.
+
+예를 들어 다음과 같은 요구사항이 있다고 하자.
+
+```text
+1순위: 점수가 높은 사용자
+2순위: 같은 점수라면 먼저 달성한 사용자
+```
+
+SQL에서는 다음과 같이 표현할 수 있다.
+
+```sql
+ORDER BY score DESC, achieved_at ASC;
+```
+
+TypeORM에서는 다음과 같다.
+
+```typescript
+queryBuilder
+  .orderBy("ranking.score", "DESC")
+  .addOrderBy("ranking.achievedAt", "ASC");
+```
+
+---
+
+## 오늘 정리한 내용 요약
+
+- INSERT 문은 테이블명, 컬럼명, 값으로 구성된다.
+- INSERT의 컬럼 순서와 VALUES의 값 순서는 반드시 일치해야 한다.
+- TypeORM의 `save()`는 데이터 존재 여부에 따라 INSERT 또는 UPDATE를 수행할 수 있고, `insert()`는 새로운 데이터를 INSERT한다.
+- MySQL DELETE의 기본 형태는 `DELETE FROM 테이블명 WHERE 조건`이다.
+- WHERE 없는 DELETE는 테이블의 모든 데이터를 삭제하므로 특히 주의해야 한다.
+- 트랜잭션 안에서 실행한 DELETE는 COMMIT 전이라면 ROLLBACK할 수 있다.
+- SELECT 문의 기본 구조는 SELECT - FROM - WHERE - ORDER BY로 이해할 수 있다.
+- ORDER BY를 생략하면 조회 결과의 순서는 보장되지 않는다.
+- LIKE는 문자열 패턴 검색에 사용한다.
+- IN은 여러 값 중 하나와 일치하는 조건을 간결하게 표현한다.
+- BETWEEN은 양쪽 경계값을 모두 포함한다.
+- DATETIME/TIMESTAMP 범위 조회에서는 종료일 처리에 주의해야 한다.
+- 여러 컬럼을 정렬할 때는 `ORDER BY 컬럼1, 컬럼2` 형태를 사용하며 TypeORM에서는 `orderBy()`와 `addOrderBy()`를 사용할 수 있다.
