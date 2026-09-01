@@ -452,8 +452,34 @@ function sendJson(res, statusCode, data, additionalHeaders = {}) {
 }
 
 function readJson(req) {
-  return new Promise((resolve, rejedct) => {
+  return new Promise((resolve, reject) => {
     let body = "";
+
+    req.setEncoding("utf8");
+
+    req.on("data", (chunk) => {
+      body += chunk;
+
+      if (Buffer.byteLength(body) > 1_000_000) {
+        reject(new HttpError(413, "요청 본문이 너무 큽니다."));
+        req.pause();
+      }
+    });
+
+    req.on("end", () => {
+      if (body.length === 0) {
+        reject(new HttpError(400, "요청 본문이 필요합니다."));
+        return;
+      }
+
+      try {
+        resolve(JSON.parse(body));
+      } catch {
+        reject(new HttpError(400, "올바른 JSON 형식이 아닙니다."));
+      }
+    });
+
+    req.on("error", reject);
   });
 }
 ```
