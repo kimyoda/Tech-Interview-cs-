@@ -1237,4 +1237,575 @@ for (const number of range(1, 5)) {
 Generator는 Iterator를 직접 구현하는 것보다 간결하게 순회 로직을 작성할 수 있다
 
 ---
+
+## 대량 데이터 비동기 순회
+
+```ts
+import { MoreThan, Repository } from "typeorm";
+
+type Player = {
+  id: number;
+  name: string;
+};
+
+async function iteratePlayers(
+  repository: Repository<Player>,
+  batchSize = 100,
+): AsyncGenerator<Player> {
+  let lastId = 0;
+
+  while (true) {
+    const players = await repository.find({
+      where: {
+        id: MoreThan(lastId),
+      },
+      order: {
+        id: "ASC",
+      },
+      take: batchSize,
+    });
+
+    if (players.length === 0) {
+      break;
+    }
+
+    for (const player of players) {
+      yield player;
+    }
+
+    lastId = players[players.length - 1].id;
+  }
+}
+```
+
+```ts
+for await (const player of iteratePlayers(repository)) {
+  await processPlayer(player);
+}
+```
+
+전체 데이터를 한 번에 메모리에 적재하지 않고 일정한 크기의 Batch로 순회
+
+`skip`, `take`를 사용하는 건 Offset Pagination이고 Cursor Pagination과 다름
+
+대량 데이터에서 다음 방식이 더 안정적
+
+```sql
+WHERE id > :lastId
+ORDER BY id ASC
+LIMIT :batchSize
+```
+
+---
+
+> 이터레이터 패턴은 컬렉션의 내부 구현을 외부에 노출하는 게 아닌 요소를 순차적으로 탐색하도록 하는 행위 패턴, JS에서 `Symbol.iterator`, Generator, `for...of`가 관련된 기능
+> 대량 데이터를 처리할 때 Async Generator, Cursor Pagination을 조합, 모든 데이터를 한 번에 메모리에 올리지 않고 순차적으로 처리
+
+---
+
+## 노출 모듈 패턴
+
+## 정의
+
+노출 모듈 패턴은 Closure를 이용해 내부 상태를 감추고 외부에 공개할 기능만 객체로 변환하는 JS 설계 패턴
+
+ES Module 나오기 전 주로 사용
+
+---
+
+## 전통적 구현
+
+```js
+const Counter = (function () {
+  let count = 0;
+
+  function increase() {
+    count += 1;
+  }
+
+  function getCount() {
+    return count;
+  }
+
+  return {
+    increase,
+    getCount,
+  };
+})();
+
+Counter.increase();
+
+console.log(Counter.getCount()); // 1
+```
+
+`count`는 Closure 내부에 있어 외부에서 직접 접근할 수 없음
+
+---
+
+## 현대적 ES Module
+
+```js
+// counter.js
+let count = 0;
+
+export function increase() {
+  count += 1;
+}
+
+export function getCount() {
+  return count;
+}
+```
+
+`export` 하지 않은 값은 모듈 외부에 공개되지 않음
+
+Node.js는 IIFE 기반 Revealing Module 패턴보다 CommonJS 혹은 ES Module의 모듈 Scope를 사용하는 게 일반적
+
+NestJS Module의 `exports`는 다른 Module에 주입할 수 있는 Provider를 제한하는 역할, Closure의 런타임 비공개 상태와 NestJS Module Provider의 공개 범위는 동일한 개념은 아님
+
+---
+
+# MVC 패턴
+
+## 정의
+
+MVC는 다음 세 역할로 분리하는 아키텍처 패턴
+
+| 구성 요소  | 역할                         |
+| ---------- | ---------------------------- |
+| Model      | 데이터와 도메인 로직 관리    |
+| View       | 사용자에게 결과 표시         |
+| Controller | 사용자 입력 처리와 흐름 제어 |
+
+---
+
+## NestJS 서버 렌더링 MVC
+
+NestJS는 MVC 지원
+
+```ts
+import { Controller, Get, Param, ParseIntPipe, Render } from "@nestjs/common";
+
+@Controller("players")
+export class PlayerController {
+  constructor(private readonly playerService: PlayerService) {}
+
+  @Get(":id")
+  @Render("players/show")
+  async show(@Param("id", ParseIntPipe) id: number) {
+    const player = await this.playerService.findOne(id);
+
+    return {
+      player,
+    };
+  }
+}
+```
+
+---
+
+## NestJS REST API
+
+```ts
+@Controller("players")
+export class PlayerController {
+  constructor(private readonly playerService: PlayerService) {}
+
+  @Get(":id")
+  async show(
+    @Param("id", ParseIntPipe) id: number,
+  ): Promise<PlayerResponseDto> {
+    return this.playerService.findOne(id);
+  }
+}
+```
+
+REST API에서 View를 렌더링하지 않고 JSON DTO를 반환, NestJS REST API 구조를 전통적인 MVC가 아닐 수도 있음
+
+---
+
+# MVP 패턴
+
+## 정의
+
+MVP는 Model, View, Presenter 역할로 분리
+
+Presenter는 View의 입력을 전달받아 Model을 호출, 결과를 다시 View에 전달
+
+```text
+View <-> Presenter <-> Model
+```
+
+View, Model은 직접 통신하지 않음
+
+---
+
+## TypeScript 예시
+
+```ts
+interface PlayerView {
+  render(name: string, score: number): void;
+
+  showError(message: string): void;
+}
+
+class PlayerPresenter {
+  constructor(
+    private readonly view: PlayerView,
+    private readonly model: PlayerModel,
+  ) {}
+
+  async loadPlayer(id: number): Promise<void> {
+    try {
+      const player = await this.model.findOne(id);
+
+      this.view.render(player.name, player.score);
+    } catch {
+      this.view.showError("플레이어를 찾을 수 없다.");
+    }
+  }
+}
+```
+
+MVP는 UI 앱에 주로 사용
+
+NestJS 같은 API 서버에서 전통적인 MVP를 적용하는 경우가 많지 않으나 Clean Architecture 등에 출력 형식을 변환하는 객체를 Presenter라고 부른다
+
+---
+
+# MVVM 패턴
+
+## 정의
+
+MVVM은 Model, View, ViewModel로 역할을 분리
+
+ViewModel은 View가 표시할 상태와 사용자가 실행할 명령을 제공
+
+```text
+View
+  데이터 바인딩
+ViewModel
+
+Model
+```
+
+MVVM의 주요 특징은 View와 ViewModel 사이의 선언적인 데이터 바인딩이다
+
+데이터 바인딩은 양방향일 필요는 없다
+
+- 단방향 데이터 바인딩
+- 양방향 데이터 바인딩
+
+모두 사용할 수 있음
+
+NestJS 같은 백엔드는 화면을 직접 관리하지 않아 전통적인 MVVM을 적용하는 경우가 드물다
+
+---
+
+## MVC, MVP, MVVM 비교
+
+| 구분             | MVC                             | MVP                           | MVVM                       |
+| ---------------- | ------------------------------- | ----------------------------- | -------------------------- |
+| 중개 객체        | Controller                      | Presenter                     | ViewModel                  |
+| View, Model 관계 | 구현 방식에 따라 직접 참조 가능 | 일반적으로 직접 참조하지 않음 | ViewModel을 통해 상태 사용 |
+| View 갱신        | Controller 또는 View 처리       | Presenter가 View 갱신         | 데이터 바인딩으로 반영     |
+| 주요 활용        | 웹, 서버 렌더링                 | 전통적인 UI                   | 데이터 바인딩              |
+| 백엔드 적용      | 흔함                            | 제한적                        | 거의 없음                  |
+
+---
+
+# 프로그래밍 패러다임
+
+프로그래밍 패러다임은 프로그램을 구성, 문제를 해결하는 기본적인 관점과 방식을 의미
+
+JS와 TS는 여러 패러다임을 함께 지원하는 멀티 패러다임
+
+---
+
+# 선언형 프로그래밍
+
+## 정의
+
+선언형 프로그래밍은 작업을 수행하는 세부 절차보다 원하는 결과가 무엇인지 표현하는 방식
+
+```text
+명령형: 어떻게 처리할 것인지
+선언형: 무엇을 얻고 싶은지
+```
+
+---
+
+## 명령형, 선언형 비교
+
+다음 두 코드는 모두 짝수의 합을 계산
+
+### 명령형
+
+```ts
+const numbers = [1, 2, 3, 4, 5];
+
+let evenTotal = 0;
+
+for (const number of numbers) {
+  if (number % 2 === 0) {
+    evenTotal += number;
+  }
+}
+
+console.log(evenTotal); // 6
+```
+
+### 선언형, 함수형 스타일
+
+```ts
+const numbers = [1, 2, 3, 4, 5];
+
+const evenTotal = numbers
+  .filter((number) => number % 2 === 0)
+  .reduce((total, number) => total + number, 0);
+
+console.log(evenTotal); // 6
+```
+
+---
+
+# 함수형 프로그래밍
+
+함수형 프로그래밍은 함수를 중심으로 프로그램을 구성하는 패러다임, 일반적인 선언형 프로그래밍
+
+## 개념
+
+### 순수함수
+
+- 같은 입력에 항상 같은 결과를 반환
+- 함수 외부의 상태를 변경하지 않음
+- 관찰 가능한 부수효과를 만들지 않음
+
+```ts
+function add(first: number, second: number): number {
+  return first + second;
+}
+```
+
+- 다음 함수는 외부 상태를 변경하여 순수 함수가 아님
+
+```ts
+let total = 0;
+
+function addTotal(value: number): void {
+  total += value;
+}
+```
+
+---
+
+### 불변성
+
+기존 값을 직접 변경하지 않고 새로운 값을 만듦
+
+```ts
+const user = {
+  id: 1,
+  name: "Kim",
+};
+
+const updatedUser = {
+  ...user,
+  name: "Lee",
+};
+
+console.log(user.name); // kim
+console.log(updatedUser.name); // Lee
+```
+
+---
+
+### 고차함수
+
+고차 함수는 다음 중 하나 이상을 만족하는 함수
+
+- 함수를 인자로 받음
+- 함수를 반환
+
+```ts
+function calculate(
+  first: number,
+  second: number,
+  operation: (first: number, second: number) => number,
+): number {
+  return operation(first, second);
+}
+
+const result = calculate(10, 20, (first, second) => first + second);
+
+console.log(result); // 30
+```
+
+---
+
+## 함수형 프로그래밍 장점
+
+- 입력과 출력 관계가 명확
+- 순수 함수는 단위 테스트가 쉬움
+- 공유 상태 변경을 줄일 수 있음
+- 작은 함수를 조합해 복잡한 로직을 만들 수 있음
+- 동시성 문제를 줄이는 데 도움을 줄 수 있음
+
+- 단점으로는 함수형으로 작성한다고 코드가 간단해지는 건 아니고 긴 함수 조합은 가독성을 떨어뜨릴 수 있음
+
+# 객체지향 프로그래밍
+
+## 정의
+
+객체지향 프로그래밍은 상태와 행동을 객체로 묶고 객체 간의 협력으로 프로그램을 구성하는 프로그래밍
+
+## 주요 특성
+
+| 특성   | 설명                                                   |
+| ------ | ------------------------------------------------------ |
+| 추상화 | 필요한 특징만 표현, 불필요한 세부 구현을 숨김          |
+| 캡슐화 | 상태와 행동을 하나로 묶고 내부 구현에 대한 접근을 제한 |
+| 상속   | 기존 클래스의 특성과 동작을 물려받아 확장              |
+| 다형성 | 동일한 인터페이스로 서로 다른 구현을 사용              |
+
+---
+
+## TypeScript 예시
+
+```ts
+abstract class Player {
+  #score = 0;
+
+  abstract attack(): string;
+
+  protected addScore(score: number): void {
+    this.#score += score;
+  }
+
+  getScore(): number {
+    return this.#score;
+  }
+}
+
+class Warrior extends Player {
+  attack(): string {
+    return "검으로 공격";
+  }
+}
+
+class Mage extends Player {
+  attack(): string {
+    return "마법으로 공격";
+  }
+}
+
+function executeAttack(player: Player): void {
+  console.log(player.attack());
+}
+
+executeAttack(new Warrior());
+executeAttack(new Mage());
+```
+
+코드에 확인할 수 있는 개념은 다음과 같다
+
+- `Player`: 추상화
+- `#score`: 캡슐화
+- `Warrior extends Player`: 상속
+- `executeAttack(Player)`: 다형성
+
+실무에서 상속보다는 Interface, Composition을 조합하는 방식이 자주 사용
+
+---
+
+# 절차형 프로그래밍
+
+## 정의
+
+절차형 프로그래밍은 프로그램을 함수와 처리 절차의 순서로 구성하는 방식
+
+```js
+function addScore(currentScore, point) {
+  return currentScore + point;
+}
+
+function resetScore() {
+  return 0;
+}
+
+let score = 0;
+
+score = addScore(score, 10);
+score = addScore(score, 20);
+
+console.log(score); // 30
+
+score = resetScore();
+```
+
+---
+
+# 패러다임 혼합
+
+JS와 TS는 패러다임을 함께 사용이 가능
+
+- 객체지향 프로그래밍
+- 함수형 프로그래밍
+- 절차형 프로그래밍
+- 이벤트 기반 프로그래밍
+- 선언형 프로그래밍
+
+NestJS도 하나의 패러다임만 사용하는 프레임워크가 아님
+
+```text
+Module, Controller, Provider -> 클래스와 DI를 사용하는 객체지향 구조
+
+Pipe 함수, 배열 메서드 -> 함수형 스타일
+
+RxJS Observable -> 함수형, 반응형 프로그래밍
+
+EventEmitter, Microservice Event -> 이벤트 기반 프로그래밍
+```
+
+실무에서 하나의 패러다임을 고집하기보다 성격에 맞게 조합하는 것이 중요
+
+---
+
+# 면접 질문 정리
+
+## 디자인 패턴이란?
+
+- 소프트웨어 설계에서 반복적으로 발생하는 문제에 대해 검증된 해결 구조를 이름과 함께 정리한 것이다. 완성된 코드를 그대로 복사하는 것이 아닌 문제 상황에 맞게 적용하는 설계 지침에 가깝다
+
+## 싱글톤과 NestJS Provider의 차이는?
+
+- 싱글톤 패턴은 클래스가 정적 필드와 생성자 제어를 이용해 자신의 단일 인스턴스를 직접 관리. NestJS Singleton Provider는 DI 컨테이너가 인스턴스 생성과 생명주기를 관리하기 때문에 테스트에서 Provider를 교체하기 쉽다
+
+## Factory, Strategy 차이는?
+
+- Factory는 어떤 객체를 생성하거나 제공할지를 결정, Strategy는 어떤 알고리즘을 실행할지를 결정. Factory가 Strategy 구현체를 선택해 반환하는 방식으로 함께 사용할 수 있음
+
+## Observer, Pub/Sub의 차이는?
+
+- Observer는 Subject와 Observer가 직접 연결되는 경우가 많으나 Pub/Sub는 Message Broker나 Event Bus를 통해 Publisher와 Subscriber를 분리. Observer는 같은 프로세스에서 사용되는 경우가 많고 Pub/Sub는 여러 서버로 확장할 수 있다
+
+## NestJS EventEmitter로 분산 이벤트를 처리
+
+- 기본적으로 쉽지 않다. NestJS EventEmitter는 동일한 앱 프로세스 안에서 동작. 여러 서버 인스턴스에 이벤트를 전달하기 위해 Kafka, Redis Pub/Sub 같은 외부 메시지 시스템이 필요
+
+## 포워드 프록시, 리버스 프록시의 차이
+
+- 포워드 프록시는 클라이언트를 대신해 서버로 요청, 리버스 프록시는 서버를 대신해 클라이언트 요청을 받는다.
+
+## MVC, MVP, MVVM의 차이는
+
+- 세 패턴 모두 화면, 상태, 사용자 입력에 대한 책임을 분리. MVC는 Controller가 입력 흐름을 제어, MVP는 Presenter가 View와 Model 사이의 통신을 중개. MVVM은 ViewModel, View 상태와 명령을 제공하고 데이터 바인딩을 통해 View와 연결된다
+
+## 순수 함수란?
+
+- 같은 입력에 항상 같은 결과를 반환, 외부 상태를 변경하는 부수 효과가 없는 함수다. 입력과 출력 관계가 명확하기에 테스트와 재사용이 쉽다.
+
+## Node.js는 싱글스레드인데 동시성 문제가 있는지?
+
+- JavaScript 동기 코드는 기본적으로 하나의 Event Loop에 실행되고 비동기 작업의 `await` 사이에 다른 요청이 실행될 수 있다. 또한 Worker Thread, Cluster, 여러 서버 프로세스를 사용하면 공유 자원에 대한 동시성 문제가 발생할 수 있다.
 ````
