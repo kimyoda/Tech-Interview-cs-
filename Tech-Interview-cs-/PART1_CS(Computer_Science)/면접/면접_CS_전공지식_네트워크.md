@@ -219,3 +219,147 @@ MySQL
 ---
 
 ### 네트워크 분류
+
+| 분류 | 범위                  | 예시                  |
+| ---- | --------------------- | --------------------- |
+| PAN  | 개인 주변의 짧은 거리 | 블루투스, 스마트워치  |
+| LAN  | 건물, 사무실, 가정    | 사내망, 가정용 공유기 |
+| MAN  | 도시 규모             | 도시 통신망           |
+| WAN  | 국가 또는 대륙 규모   | 인터넷, 기업 전용 망  |
+
+#### PAN
+
+**PAN(Personal Area Network)**은 개인 주변의 짧은 거리에 사용하는 네트워크다
+
+```text
+스마트폰 <-> 블루투스 이어폰
+```
+
+#### LAN
+
+**MAN(Metropolitan Area Network)**은 도시 규모의 네트워크다
+
+#### WAN
+
+**WAN(Wide Area Network)**은 국가나 대륙처럼 넓은 지역을 연결하는 네트워크다
+
+인터넷은 여러 LAN과 WAN이 서로 연결된 거대한 네트워크다
+
+---
+
+### 네트워크 성능 분석 명령어
+
+| 명령어       | 용도                                          |
+| ------------ | --------------------------------------------- |
+| `ping`       | RTT와 패킷 손실                               |
+| `traceroute` | macOS/Linux에서 목적지까지 확인               |
+| `tracert`    | Windows에서 목적지까지                        |
+| `ss`         | Linux에서 소켓과 포트 상태                    |
+| `lsof -i`    | macOS/Linux에서 포트를 사용하는 프로세스 확인 |
+| `nslookup`   | DNS 조회                                      |
+| `dig`        | DNS 상세                                      |
+| `curl`       | HTTP 요청과 단계별 시간 확인                  |
+
+---
+
+#### ping
+
+```bash
+ping api.example.com
+```
+
+확인할 수 있는 내용은 다음과 같다
+
+- 대상 서버와 네트워크 통신 가능 여부
+- RTT
+- 패킷 손실률
+
+주의할 점은 서버나 방화벽이 ICMP를 차단할 수 있다는 것
+
+`ping`이 실패해서 반드시 HTTP 서버가 중단되는 것은 아님
+
+---
+
+#### traceroute, tracert
+
+macOS/Liunx:
+
+```bash
+traceroute api.example.com
+```
+
+Windows:
+
+```powershell
+tracert api.example.com
+```
+
+목적지까지 거치는 라우터의 경로를 확인할 수 있음
+
+각 라우터를 **홉(Hop)**라고 한다
+
+다만 라우터가 응답하지 않거나 실제 왕복 경로가 서로 다를수 있기에 출력 결과만으로 정확한 장애 지점을 단정해서 안된다
+
+---
+
+#### 포트 상태 확인
+
+Linux:
+
+```bash
+ss -lntp
+```
+
+macOS:
+
+```bash
+lsof -iTCP -sTCP:LISTEN -n -p
+```
+
+특정 포트 확인:
+
+```bash
+lsof -i :3000
+```
+
+---
+
+#### DNS 조회
+
+```bash
+nslookup api.example.com
+```
+
+```bash
+dig api.example.com
+```
+
+```bash
+dig +short api.example.com
+```
+
+---
+
+#### HTTP 단계별 시간 확인
+
+```bash
+curl -o /dev/null -sS \
+  -w 'remote_ip: %{remote_ip}\nDNS: %{time_namelookup}s\nTCP: %{time_connect}s\nTLS: %{time_appconnect}s\nTTFB: %{time_starttransfer}s\nTotal: %{time_total}s\nHTTP: %{http_code}\n' \
+  https://api.example.com
+```
+
+| 항목                 | 의미                       |
+| -------------------- | -------------------------- |
+| `time_namelookup`    | DNS 조회가 끝난 시점       |
+| `time_connect`       | TCP 연결이 끝난 시점       |
+| `time_appconnect`    | TLS 연결이 끝난 시점       |
+| `time_starttransfer` | 첫 응답 바이트를 받은 시점 |
+| `time_total`         | 전체 요청이 끝난 시점      |
+
+이 값들은 대부분 요청 시작 시점부터 측정한 누적 시간이다
+
+따라서 순수 TLS 소요 시간을 구하려면 다음과 같이 차리를 계산해야 한다
+
+```text
+TLS 연결 시간 = time_appconnect - time_connect
+```
