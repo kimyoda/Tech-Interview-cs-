@@ -1,1 +1,7 @@
 .DS_Store
+
+# npm이 설치한 패키지
+node_modules/
+
+# TypeScript 컴파일 결과
+dist/

@@ -1,0 +1,14 @@
+{
+  "compilerOptions": {
+    "target": "ES2022",
+    "module": "CommonJS",
+    "moduleResolution": "Node",
+    "rootDir": "1장",
+    "outDir": "dist",
+    "strict": true,
+    "noEmitOnError": true,
+    "types": ["node"],
+    "skipLibCheck": true
+  },
+  "include": ["1장/http1.ts", "1장/http400.ts", "1장/http500.ts"]
+}
