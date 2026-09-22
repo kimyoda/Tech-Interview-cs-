@@ -1,0 +1,23 @@
+{
+  "name": "http-study-examples",
+  "version": "1.0.0",
+  "private": true,
+  "description": "HTTP and WebSocket study examples",
+  "scripts": {
+    "start": "node socket.js",
+    "check": "node --check socket.js",
+    "build:ts": "tsc -p tsconfig.json",
+    "check:ts": "tsc --noEmit -p tsconfig.json",
+    "start:ts:http1": "node dist/http1.js",
+    "start:ts:http400": "node dist/http400.js",
+    "start:ts:http500": "node dist/http500.js"
+  },
+  "license": "ISC",
+  "dependencies": {
+    "ws": "^8.18.3"
+  },
+  "devDependencies": {
+    "@types/node": "^24.0.0",
+    "typescript": "^5.9.0"
+  }
+}
