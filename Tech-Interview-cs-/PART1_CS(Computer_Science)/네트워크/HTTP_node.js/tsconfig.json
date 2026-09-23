@@ -3,12 +3,13 @@
     "target": "ES2022",
     "module": "CommonJS",
     "moduleResolution": "Node",
-    "rootDir": "1장",
+    "rootDir": ".",
     "outDir": "dist",
     "strict": true,
     "noEmitOnError": true,
     "types": ["node"],
     "skipLibCheck": true
   },
-  "include": ["1장/http1.ts", "1장/http400.ts", "1장/http500.ts"]
+  "include": ["1장/*.ts", "2장/*.ts"],
+  "exclude": ["node_modules", "dist"]
 }
