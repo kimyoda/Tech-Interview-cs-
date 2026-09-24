@@ -8,9 +8,10 @@
     "check": "node --check socket.js",
     "build:ts": "tsc -p tsconfig.json",
     "check:ts": "tsc --noEmit -p tsconfig.json",
-    "start:ts:http1": "node dist/http1.js",
-    "start:ts:http400": "node dist/http400.js",
-    "start:ts:http500": "node dist/http500.js"
+    "start:ts:http1": "npm run build:ts && node dist/1장/http1.js",
+    "start:ts:http400": "npm run build:ts && node dist/1장/http400.js",
+    "start:ts:http500": "npm run build:ts && node dist/1장/http500.js",
+    "start:ts:redirect": "npm run build:ts && node dist/2장/redirect.js"
   },
   "license": "ISC",
   "dependencies": {
