@@ -33,3 +33,14 @@ Cookie: sessionId=abc123
 쿠키 값에는 ASCII 범위를 벗어난 문자를 그대로 넣지 않고 `encodeURIComponent` 등으로 인코딩한다
 
 ## 실습
+
+| 파일                     | 확인할 내용                               |
+| ------------------------ | ----------------------------------------- |
+| [cookie.js](cookie.js)   | `HttpOnly`, `SameSite=Lax` 세션 쿠키      |
+| [cookie2.js](cookie2.js) | `Max-Age`를 사용한 만료 시간              |
+| [cookie3.js](cookie3.js) | HTTPS 환경용 `SameSite=None; Secure` 쿠키 |
+
+```bash
+node cookie.js
+curl -i http://localhost:8080
+```
