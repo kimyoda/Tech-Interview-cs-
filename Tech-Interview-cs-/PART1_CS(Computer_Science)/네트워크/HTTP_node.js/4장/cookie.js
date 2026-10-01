@@ -1,0 +1,15 @@
+"use strict";
+
+const http = require("node:http");
+
+const server = http.createServer((res, req) => {
+  res.writeHead(200, {
+    "Content-Type": "text/plain; charset=utf-8",
+    "Set-Cookie": "hello=world; Path=/; HttpOnly; SameSite=Lax",
+  });
+  res.end("HttpOnly 세션 쿠키를 설정했습니다.");
+});
+
+server.listen(8080, () => {
+  console.log("http://localhost:8080에서 대기 중...");
+});
