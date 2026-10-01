@@ -44,3 +44,32 @@ Cookie: sessionId=abc123
 node cookie.js
 curl -i http://localhost:8080
 ```
+
+### TypeScript 실습 파일
+
+| JavaScript 파일          | TypeScript 파일          | 확인할 내용                            |
+| ------------------------ | ------------------------ | -------------------------------------- |
+| [cookie.js](cookie.js)   | [cookie.ts](cookie.ts)   | 세션 쿠키와 `HttpOnly`, `SameSite=Lax` |
+| [cookie2.js](cookie2.js) | [cookie2.ts](cookie2.ts) | `Max-Age=200`                          |
+| [cookie3.js](cookie3.js) | [cookie3.ts](cookie3.ts) | `SameSite=None; Secure` 응답 헤더      |
+
+TypeScript 파일은 JavaScript 예제와 같은 응답을 만든다. `req`에는 `http.IncomingMessage`, `res`에는 `http.ServerResponse` 타입을 지정해 컴파일할 때 사용 방법을 검사한다.
+
+### TypeScript 실행
+
+`HTTP_node.js` 폴더 또는 그 아래 `4장` 폴더에서 원하는 서버 하나를 실행한다.
+
+```bash
+npm run start:ts:cookie
+```
+
+또는 기존 서버를 `Ctrl+C`로 종료한 뒤 다른 예제를 실행한다.
+
+```bash
+npm run start:ts:cookie2
+npm run start:ts:cookie3
+```
+
+각 명령은 해당 `.ts` 파일 하나를 컴파일하고 생성된 `dist/4장/*.js`를 바로 실행한다. 세 서버 모두 8080 포트를 사용하므로 한 번에 하나만 실행한다.
+
+서버를 켜 둔 채 다른 터미널에서 응답 헤더를 확인한다.
