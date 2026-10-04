@@ -34,3 +34,20 @@ If-None-Match: "v1"
 ```
 
 변경되지 않았다면 서버는 본문 없이 `304 Not Modified` 를 반환 전체 본문을 다시 전송하는 비용을 줄인다
+
+## 실습
+
+| 파일                               | 내용                          |
+| ---------------------------------- | ----------------------------- |
+| [cache.js](cache.js)               | `max-age`와 `must-revalidate` |
+| [cacheNoCache.js](cacheNoCache.js) | 저장 후 항상 재검증           |
+| [cacheNoStore.js](cacheNoStore.js) | 저장 공지                     |
+| [cachePublic.js](cachePublic.js)   | 공유 캐시 허용                |
+| [cacheSWR.js](cacheSWR.js)         | stale-while-revalidate        |
+
+```bash
+node cache.js
+curl -i http://localhost:8080
+```
+
+브라우저 개발자 도구에 Disable cache 옵션이 켜져 있으면 실습 결과가 달라 질 수 있음
