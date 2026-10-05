@@ -14,7 +14,12 @@
     "start:ts:cors": "npm run build:ts:core && node dist/3장/core.js",
     "start:ts:cookie": "tsc 4장/cookie.ts --outDir dist/4장 --target ES2022 --module CommonJS --moduleResolution Node --strict --noEmitOnError --types node --skipLibCheck && node dist/4장/cookie.js",
     "start:ts:cookie2": "tsc 4장/cookie2.ts --outDir dist/4장 --target ES2022 --module CommonJS --moduleResolution Node --strict --noEmitOnError --types node --skipLibCheck && node dist/4장/cookie2.js",
-    "start:ts:cookie3": "tsc 4장/cookie3.ts --outDir dist/4장 --target ES2022 --module CommonJS --moduleResolution Node --strict --noEmitOnError --types node --skipLibCheck && node dist/4장/cookie3.js"
+    "start:ts:cookie3": "tsc 4장/cookie3.ts --outDir dist/4장 --target ES2022 --module CommonJS --moduleResolution Node --strict --noEmitOnError --types node --skipLibCheck && node dist/4장/cookie3.js",
+    "start:ts:cache": "tsc 5장/cache.ts --outDir dist/5장 --target ES2022 --module CommonJS --moduleResolution Node --strict --noEmitOnError --types node --skipLibCheck && node dist/5장/cache.js",
+    "start:ts:cache-no-cache": "tsc 5장/cacheNoCache.ts --outDir dist/5장 --target ES2022 --module CommonJS --moduleResolution Node --strict --noEmitOnError --types node --skipLibCheck && node dist/5장/cacheNoCache.js",
+    "start:ts:cache-no-store": "tsc 5장/cacheNoStore.ts --outDir dist/5장 --target ES2022 --module CommonJS --moduleResolution Node --strict --noEmitOnError --types node --skipLibCheck && node dist/5장/cacheNoStore.js",
+    "start:ts:cache-public": "tsc 5장/cacheNoPublic.ts --outDir dist/5장 --target ES2022 --module CommonJS --moduleResolution Node --strict --noEmitOnError --types node --skipLibCheck && node dist/5장/cacheNoPublic.js",
+    "start:ts:cache-swr": "tsc 5장/cacheSWR.ts --outDir dist/5장 --target ES2022 --module CommonJS --moduleResolution Node --strict --noEmitOnError --types node --skipLibCheck && node dist/5장/cacheSWR.js"
   },
   "license": "ISC",
   "dependencies": {

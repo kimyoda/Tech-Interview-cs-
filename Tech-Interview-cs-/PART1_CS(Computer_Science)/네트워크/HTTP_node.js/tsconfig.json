@@ -10,6 +10,6 @@
     "types": ["node"],
     "skipLibCheck": true
   },
-  "include": ["1장/*.ts", "2장/*.ts", "3장/*.ts", "4장/*.ts"],
+  "include": ["1장/*.ts", "2장/*.ts", "3장/*.ts", "4장/*.ts", "5장/*.ts"],
   "exclude": ["node_modules", "dist"]
 }
