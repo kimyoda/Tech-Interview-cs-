@@ -56,8 +56,44 @@ Transfer-Encoding: chunked
 
 ## 면접 체크
 
-- `301`, `302`, `307`, `308`의 차이는
+<details>
+<summary>301, 302, 307, 308의 차이는 무엇인가?</summary>
 
-- `303`이 Post, Redirect, Get 패턴에 알맞은 이유는?
+**이동이 영구적인지 기존 요청의 메서드, 본문을 유지하는지 다르다**
 
-- 상대 경로와 절대 URL을 `Location`에 쓸 때 차이는?
+`POST` 요청의 메서드와 본문을 유지하며 임시 이동시키면 `307`을 사용
+`301`, `302`는 `POST`, `GET`으로 변경될 수 있어 메서드 유지가 필요한 API에 사용할 때 주의해야 한다.
+
+</details>
+
+<details>
+<summary>303이 Post, Redirect, Get 패턴에 알맞은 이유는</summary>
+
+**POST 처리 결과를 별도의 GET 요청으로 조회하도록 안내하기 때문**
+
+1. 클라이언트가 `POST`로 데이터를 제출
+2. 서버가 처리 후 `303 See Other`와 `Location`을 반환
+3. 클라이언트가 해당 위치에 `GET` 요청을 보내 결과를 조회
+
+최종 화면이 `GET` 응답이므로 새로고침할 때 원래의 `POST`가 다시 제출되는 문제를 줄일 수 있음
+
+</details>
+
+<details>
+<summary>상대 경로와 절대 URL을 Location에 쓸 때 차이는</summary>
+
+**상대 경로는 원래 요청 URL을 기준으로 해석, 절대 URL은 이동할 주소 전체를 지정한다**
+
+원래 요청 주소가 `https://example.com/members/1`이면 아래와 같음
+
+| Location                         | 주소                               |
+| -------------------------------- | ---------------------------------- |
+| `/redirect`                      | `https://example.com/redirect`     |
+| `next`                           | `https://example.com/members/next` |
+| `https://other.example/redirect` | `https://other.example/redirect`   |
+
+`/`로 시작하는 경로는 같은 출처의 루트 경로를 기준으로 해석. 원래 요청 경로를 기준으로 해석
+
+절대 URL은 스킴, 호스트, 포트까지 지정할 수 있어 다른 출처로 이동할 때도 사용할 수 있다.
+
+</details>

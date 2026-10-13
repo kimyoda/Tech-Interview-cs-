@@ -275,11 +275,84 @@ JavaScript 버전과 TypeScript 버전은 동일한 HTTP 응답을 반환한다.
 
 ## 11. 면접 체크
 
-- HTTP 요청과 응답 메시지는 어떤 부분으로 구성되는가?
-- `4xx`와 `5xx`의 책임 차이는 무엇인가?
-- HTTP의 헤더와 본문은 어떻게 구분되는가?
-- `http.IncomingMessage`는 어떤 정보를 제공하는가?
-- `http.ServerResponse`는 어떤 역할을 하는가?
-- TypeScript 타입은 HTTP 서버 실행 과정에서 어떤 도움을 주는가?
-- `tsc`로 컴파일한 후 Node.js가 실행하는 파일은 `.ts`인가 `.js`인가?
-- HTTP/2에서 텍스트 상태 라인이 보이지 않아도 상태 코드의 의미가 유지되는 이유는 무엇인가?
+<details>
+<summary>1. HTTP 요청과 응답 메시지는 어떤 부분으로 구성되는가?</summary>
+
+**HTTP/1.1 메시지는 시작 라인, 헤더, 빈 줄, 선택적인 본문으로 구성된다.**
+
+요청 시작 라인 예시는 `GET /members/1 HTTP/1.1` 이고, 응답 상태 라인 예시는 `HTTP/1.1 200 OK`이다.
+모든 메시지에 본문이 있는 것은 아니다. `204 No Content` 응답에 본문이 없다.
+
+</details>
+
+<details>
+
+<summary>4xx, 5xx의 책임 차이는?</summary>
+
+**4xx는 클라이언트 요청에 문제가 있음을 나타냄, 5xx는 서버 측 문제로 요청을 처리하지 못했음을 나타냄**
+
+잘못된 입력값에 `400 Bad Reqeust` 등을 사용, 예상하지 못한 서버 내부 오류에 `500 Internal Server Error`를 사용
+
+상태 코드는 실제 원인을 확인 전까지 오류를 분류하는 정보.
+
+</details>
+
+<details>
+<summary>HTTP의 헤더와 본문은 어떻게 구분되는가?</summary>
+
+**HTTP/1.1에서 빈 줄이 헤더 영역과 본문을 구분한다.**
+
+</details>
+
+<details>
+<summary>http.IncomingMessage는 어떤 정보를 제공하는가?</summary>
+
+**Node.js HTTP 서버에서는 클라이언트가 보낸 요청의 정보와 본문 스트림을 제공한다**
+
+기본 `node:http` 모듈은 JSON 본문을 자동으로 객체로 변환하지 않는다. 본문을 읽고 `JSON.parse()` 등으로 직접 처리해야 한다.
+
+</details>
+
+<details>
+<summary>http.ServerResponse는 어떤 역할을 하는가?</summary>
+
+**클라이언트에게 보낼 HTTP 응답의 상태 코드, 헤더, 본문을 구성하고 전승하는 객체**
+
+| 메서드            | 명칭                                   |
+| ----------------- | -------------------------------------- |
+| `res.statusCode`  | 상태 코드 설정                         |
+| `res.setHeader()` | 응답 헤더 설정                         |
+| `res.writeHead()` | 상태 코드와 헤더 전송                  |
+| `res.wrtie()`     | 응답 본문의 일부 전송                  |
+| `res.end()`       | 응답 완료, 선택적으로 마지막 본문 전송 |
+
+`res.writeHead(200)` 으로 성공 상태를 지정, `res.end("ok")`로 본문을 보내 응답을 끝낼 수 있다
+
+</details>
+
+<details>
+<summary>TypeScript 타입은 HTTP 서버 실행 과정에서 어떤 도움을 주는가?</summary>
+
+**코드를 작성하고 타입 검사하는 단계에서 요청, 응답 객체의 잘못된 사용을 바견하도록 돕는다**
+
+타입 표시는 컴파일 결과에서 제거된다. 클라이언트가 보낸 JSON이나 입력값의 유효성은 실행 중에 별도로 검증해야 한다.
+
+</details>
+
+<details>
+<summary>tsc로 컴파일한 후 Node.js가 실행하는 파일은 .ts, .js인지</summary>
+
+**실습에서 컴파일 결과인 `.js` 파일을 실행**
+
+`tsc`가 `http1.ts`를 타입 검사 `dist/http1.js`로 컴파일하여 Node.js는 `dist/http1.js`를 실행.
+
+</details>
+
+<details>
+<summary>HTTP/2에서 텍스트 상태 라인이 보이지 ㅇ낳아도 상태 코드의 의미가 유지되는 이유는 무엇인지</summary>
+
+**HTTP의 의미와 전송 형식이 구분되기 때문이다**
+
+전송 형식이 달라져도 `200`은 성공, `404`은 리소스를 찾을 수 없음 이라는 상태 코드 의미는 유지된다.
+
+</details>
