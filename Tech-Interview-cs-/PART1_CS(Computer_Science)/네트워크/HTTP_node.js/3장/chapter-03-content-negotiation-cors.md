@@ -38,3 +38,32 @@ Access-Control-Allow-Origin: http://localhost:3000
 Access-Control-Allow-Methods: GET, POST, OPTIONS
 Access-Control-Allow-Headers: Content-Type
 ```
+
+## 면접 체크
+
+<details>
+<summary> Accept와 Content-Type의 역할은 어떻게 다른가?</summary>
+
+**Accpet는 원하는 응답 형식을 알리고, Contnet-Type은 실제로 보낸 본문의 형식을 알린다**
+
+클라이언트가 JSON 응답을 원하면 `Accept: applcation/json`를 보내고, 서버가 실제 JSON을 반환하면 응답에 `Content-Type: application/json`을 설정한다.
+
+</details>
+
+<details>
+<summary> Vary 헤더가 캐시에 필요한 이유는</summary>
+
+**같은 URL이라도 특정 요청 헤더에 따라 응답이 잘라질 수 있기 때문**
+
+`Vary`는 서로 다른 표현이 캐시에서 잘못 섞이는 문제를 방지.
+
+</details>
+
+<details>
+<summary> CORS 오류가 브루어저에 보이나 서버 간 요청에 나타나지 않는 이유는</summary>
+
+**CORS는 브라우저가 적용하는 교차 출처 접근 제어이기 때문이다**
+
+일반적인 Node.js 서버나 `curl`은 브라우저의 동일 출처 정책을 적용하지 않아 CORS 제한을 받지 않는다. CORS 설정만으로 API 접근을 제한할 수 없고 API 접근 권한은 인증과 인가로 확인.
+
+</details>

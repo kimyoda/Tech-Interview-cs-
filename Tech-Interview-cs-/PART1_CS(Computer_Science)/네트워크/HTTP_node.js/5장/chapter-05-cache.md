@@ -107,3 +107,28 @@ Cache-Control: no-store
 `cache-public` 실행 명령은 실제 파일명인 `cacheNoPublic.ts`를 컴파일한다. 파일명에는 `No`가 들어 있지만 이 예제의 실제 지시어는 `public`이다.
 
 **확인 범위:** 이 실습은 서버가 올바른 `Cache-Control` 응답 헤더를 보내는지 확인한다. Postman에 `200 OK`와 헤더가 표시됐다는 사실만으로 응답이 실제 캐시에 저장됐는지, 6초 후 재검증됐는지, `stale-while-revalidate`가 백그라운드에서 수행됐는지까지 확인한 것은 아니다. 현재 예제에는 `ETag`·`Last-Modified` 검사나 `304 Not Modified` 응답 로직도 없다.
+
+## 면접 체크
+
+<details>
+<summary>no-cache와 no-store의 차이는 무엇인가?</summary>
+
+**no-cache는 저장을 허용하되 재사용 전에 재검증, no-store는 저장 장체를 금지하도록 지사한다.**
+
+`no-cache` 응답에 검증자가 있으면 조건부 요청을 보낼 수 있다. 리소스가 변경되지 않으면 서버가 `304 Not Modified`를 반호나하여 기존 본문을 재사용할 수 있다.
+
+</details>
+
+<details>
+<summary>304 응답에 본문이 없는 이유</summary>
+
+**클라이언트나 캐시가 가진 기존 본문을 재사용하도록 알리는 응답이기 때문**
+
+</details>
+
+<details>
+<summary>개인 캐시와 공유 캐시의 차이는?</summary>
+
+\*\*개인 캐시는 한 사용자를 위한 캐시고, 공유 캐시는 여러 사용자의 요청에 응답을 재사용할 수 있는 캐시이다.
+
+</details>
